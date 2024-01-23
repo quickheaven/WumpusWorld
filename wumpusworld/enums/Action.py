@@ -1,0 +1,2 @@
+class Action:
+    FORWARD, TURN_LEFT, TURN_RIGHT, SHOOT, GRAB, CLIMB = range(6)
