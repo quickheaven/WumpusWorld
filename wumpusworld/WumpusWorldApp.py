@@ -1,15 +1,40 @@
 from wumpusworld.agent.Agent import Agent
 from wumpusworld.agent.NaiveAgent import NaiveAgent
 from wumpusworld.env.Environment import Environment
+from wumpusworld.env.dto.Percept import Percept
 
 
-def run_episode(env: Environment, agent: Agent):
-    env.add_agent(agent)
-    env.draw()
+def run_episode(env: Environment, agent: Agent, percept: Percept):
+    if percept.is_terminated:
+        print("Game Over.")
+    else:
+        # Get the next action of the Player
+        action = agent.next_action(percept)
+
+        # Apply the action of the Player and Get the latest Perception
+        percept_result = env.apply_action(action)
+
+        # Display the Environment
+        env.draw()
+
+        # Run again an Episode
+        run_episode(env, agent, percept_result)
 
 
 if __name__ == '__main__':
-    env = Environment(4, 4, False, 0.2)
-    agent = NaiveAgent()
+    player = NaiveAgent()
 
-    run_episode(env, agent)
+    # Create the Cave
+    environment = Environment(4, 4, False, 0.2)
+
+    # Player enters the Cave
+    environment.add_agent(player)
+
+    # Display the initial setup of the Cave
+    environment.draw()
+
+    # Initialize the perception of the Player
+    percept = Percept(False, False, False, False, False, False, 0.0)
+
+    print('***** Game Starts *****')
+    run_episode(environment, player, percept)
