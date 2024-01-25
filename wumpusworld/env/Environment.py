@@ -79,38 +79,130 @@ class Environment:
                        , header=None)
         print(table.draw())
 
-        #table = Texttable()
-        #table.add_rows(self._matrix
-                       # This will reverse the order so the bottom index [0][0] will be displayed in the bottom.
+        # table = Texttable()
+        # table.add_rows(self._matrix
+        # This will reverse the order so the bottom index [0][0] will be displayed in the bottom.
         #               , header=None)
-        #print(table.draw())
+        # print(table.draw())
 
     def add_agent(self, agent: Agent):
         cell_agent = self._matrix[0][0]
         cell_agent.add_item(agent)
 
+    def get_cell_agent(self):
+        cell_agent = None
+        agent = None
+        for i in range(len(self._matrix)):
+            for j in range(len(self._matrix[i])):
+                items = self._matrix[i][j].items
+                for item in items:
+                    if isinstance(item, Agent):
+                        cell_agent = self._matrix[i][j]
+                        agent = item
+                        break
+        return cell_agent, agent
+
     def apply_action(self, action: Action):
         print('Action: {}'.format(action))
         action_id = Action.get_by_value(str(action))
 
-        # TODO study the scala implementation and do the same here.
-        # Find a way to improve the use of case statement in Python
+        # TODO
+        # a. Study the scala implementation about coordinates.
+        # b. Find a way to improve the use of CASE statement in Python
+        # c. Remove the Agent from its previous cell.
+        # d. Find a better way to move around the matrix.
+        # e. Find a better way to limit the movement of the agent within the matrix.
+        # f. Develop other actions.
+        # g. Develop the concept of rewards.
+        cell_agent, agent = self.get_cell_agent()
+
+        percept = None
         match action_id:
             case 0:
-                pass
+                # FORWARD
+                x = cell_agent.x
+                y = cell_agent.y + 1
+                print('OldCell x:{}, y: {} -- NewCell: x:{}, y:{}'.format(cell_agent.x, cell_agent.y, x, y))
+
+                is_bump = x > self._width
+                if is_bump:
+                    percept = Percept(cell_agent.has_stench, cell_agent.has_breeze, cell_agent.has_glitter, True,
+                                      cell_agent.has_scream, self.__is_terminated(cell_agent), 0.0)
+                else:
+                    new_cell_agent = self._matrix[x][y]
+                    new_cell_agent.add_item(agent)
+                    is_terminated = self.__is_terminated(new_cell_agent)
+
+                    cell_agent.items.pop(agent)
+
+                    percept = Percept(new_cell_agent.has_stench, new_cell_agent.has_breeze, new_cell_agent.has_glitter,
+                                      False, new_cell_agent.has_scream, is_terminated, -1)
+
             case 1:
-                pass
+                # TURN_LEFT
+                x = cell_agent.x + 1
+                y = cell_agent.y - 1
+                print('OldCell x:{}, y: {} -- NewCell: x:{}, y:{}'.format(cell_agent.x, cell_agent.y, x, y))
+
+                is_bump = y == -1
+                if is_bump:
+                    percept = Percept(cell_agent.has_stench, cell_agent.has_breeze, cell_agent.has_glitter, True,
+                                      cell_agent.has_scream, self.__is_terminated(cell_agent), 0.0)
+                else:
+                    new_cell_agent = self._matrix[x][y]
+                    new_cell_agent.add_item(agent)
+                    is_terminated = self.__is_terminated(new_cell_agent)
+
+                    cell_agent.items.pop(agent)
+
+                    percept = Percept(new_cell_agent.has_stench, new_cell_agent.has_breeze, new_cell_agent.has_glitter,
+                                      False, new_cell_agent.has_scream, is_terminated, -1)
+
             case 2:
-                pass
+                # TURN_RIGHT
+                x = cell_agent.x + 1
+                y = cell_agent.y + 1
+                print('OldCell x:{}, y: {} -- NewCell: x:{}, y:{}'.format(cell_agent.x, cell_agent.y, x, y))
+
+                is_bump = x > self._width -1
+                if is_bump:
+                    percept = Percept(cell_agent.has_stench, cell_agent.has_breeze, cell_agent.has_glitter, True,
+                                      cell_agent.has_scream, self.__is_terminated(cell_agent), 0.0)
+                else:
+                    new_cell_agent = self._matrix[x][y]
+                    new_cell_agent.add_item(agent)
+                    is_terminated = self.__is_terminated(new_cell_agent)
+
+                    cell_agent.items.pop(agent)
+
+                    percept = Percept(new_cell_agent.has_stench, new_cell_agent.has_breeze, new_cell_agent.has_glitter,
+                                      False, new_cell_agent.has_scream, is_terminated, -1)
+
             case 3:
-                pass
+                # SHOOT TODO
+                print('Unsupported action.')
+                percept = Percept(cell_agent.has_stench, cell_agent.has_breeze, cell_agent.has_glitter, False,
+                                  cell_agent.has_scream, self.__is_terminated(cell_agent), 0.0)
+
             case 4:
-                pass
+                # GRAB TODO
+                print('Unsupported action.')
+                percept = Percept(cell_agent.has_stench, cell_agent.has_breeze, cell_agent.has_glitter, False,
+                                  cell_agent.has_scream, self.__is_terminated(cell_agent), 0.0)
+                print(percept)
+                return percept
+
             case 5:
-                pass
-            case _:
-                pass
-        return Percept(False, False, False, False, False, True, 0.0)
+                # CLIMB TODO
+                print('Unsupported action.')
+                percept = Percept(cell_agent.has_stench, cell_agent.has_breeze, cell_agent.has_glitter, False,
+                                  cell_agent.has_scream, self.__is_terminated(cell_agent), 0.0)
+
+        print('Player Perception after the moved: {}'.format(percept))
+        return percept
+
+    def __is_terminated(self, cell: Cell):
+        return cell.has_wumpus or cell.has_pit
 
 
 if __name__ == '__main__':

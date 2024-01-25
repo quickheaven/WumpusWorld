@@ -5,7 +5,7 @@ from wumpusworld.env.dto.Percept import Percept
 
 
 def run_episode(env: Environment, agent: Agent, percept: Percept):
-    if percept.is_terminated:
+    if percept.is_terminated():
         print("Game Over.")
     else:
         # Get the next action of the Player
@@ -16,6 +16,7 @@ def run_episode(env: Environment, agent: Agent, percept: Percept):
 
         # Display the Environment
         env.draw()
+        print('\n\n')
 
         # Run again an Episode
         run_episode(env, agent, percept_result)
@@ -30,11 +31,12 @@ if __name__ == '__main__':
     # Player enters the Cave
     environment.add_agent(player)
 
-    # Display the initial setup of the Cave
-    environment.draw()
-
     # Initialize the perception of the Player
     percept = Percept(False, False, False, False, False, False, 0.0)
 
-    print('***** Game Starts *****')
+    # Display the initial setup of the Cave
+    print('********* Game Starts *********')
+    print('The Player Initial Perception: {}'.format(percept))
+    environment.draw()
+
     run_episode(environment, player, percept)

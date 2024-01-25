@@ -12,10 +12,13 @@ class Percept:
         self._is_terminated = is_terminated
         self._reward = reward
 
-    @property
+    def __str__(self):
+        return ('Stench: {}, Breeze: {}, Glitter: {}, Bump: {}, Scream: {}, Is_terminated: {}, Reward: {}'
+                .format(self._stench, self._breeze, self._glitter, self._bump, self._screem, self._is_terminated, self._reward))
+
+
     def is_terminated(self):
         return self._is_terminated
 
-    @property
     def reward(self):
         return self._reward
