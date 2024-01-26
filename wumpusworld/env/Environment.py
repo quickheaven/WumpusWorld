@@ -109,9 +109,8 @@ class Environment:
         # TODO
         # a. Study the scala implementation about coordinates.
         # b. Find a way to improve the use of CASE statement in Python
-        # c. Remove the Agent from its previous cell.
-        # d. Find a better way to move around the matrix.
-        # e. Find a better way to limit the movement of the agent within the matrix.
+        # c. Remove the Agent from its previous cell. (DONE)
+        # d. Develop the concept of Coordinates and find a better way to move around the matrix. Find a better way to limit the movement of the agent within the matrix.
         # f. Develop other actions.
         # g. Develop the concept of rewards.
         cell_agent, agent = self.get_cell_agent()
@@ -124,7 +123,8 @@ class Environment:
                 y = cell_agent.y + 1
                 print('OldCell x:{}, y: {} -- NewCell: x:{}, y:{}'.format(cell_agent.x, cell_agent.y, x, y))
 
-                is_bump = x > self._width
+                is_bump = x > self._width or y > self._height
+                # is_bump = x > self._width - 1
                 if is_bump:
                     percept = Percept(cell_agent.has_stench, cell_agent.has_breeze, cell_agent.has_glitter, True,
                                       cell_agent.has_scream, self.__is_terminated(cell_agent), 0.0)
@@ -133,7 +133,7 @@ class Environment:
                     new_cell_agent.add_item(agent)
                     is_terminated = self.__is_terminated(new_cell_agent)
 
-                    cell_agent.items.pop(agent)
+                    cell_agent.items.remove(agent)
 
                     percept = Percept(new_cell_agent.has_stench, new_cell_agent.has_breeze, new_cell_agent.has_glitter,
                                       False, new_cell_agent.has_scream, is_terminated, -1)
@@ -144,7 +144,8 @@ class Environment:
                 y = cell_agent.y - 1
                 print('OldCell x:{}, y: {} -- NewCell: x:{}, y:{}'.format(cell_agent.x, cell_agent.y, x, y))
 
-                is_bump = y == -1
+                # is_bump = y == -1
+                is_bump = x > self._width - 1
                 if is_bump:
                     percept = Percept(cell_agent.has_stench, cell_agent.has_breeze, cell_agent.has_glitter, True,
                                       cell_agent.has_scream, self.__is_terminated(cell_agent), 0.0)
@@ -152,8 +153,9 @@ class Environment:
                     new_cell_agent = self._matrix[x][y]
                     new_cell_agent.add_item(agent)
                     is_terminated = self.__is_terminated(new_cell_agent)
+                    new_cell_agent.is_alive = is_terminated == False
 
-                    cell_agent.items.pop(agent)
+                    cell_agent.items.remove(agent)
 
                     percept = Percept(new_cell_agent.has_stench, new_cell_agent.has_breeze, new_cell_agent.has_glitter,
                                       False, new_cell_agent.has_scream, is_terminated, -1)
@@ -164,7 +166,7 @@ class Environment:
                 y = cell_agent.y + 1
                 print('OldCell x:{}, y: {} -- NewCell: x:{}, y:{}'.format(cell_agent.x, cell_agent.y, x, y))
 
-                is_bump = x > self._width -1
+                is_bump = x > self._width - 1
                 if is_bump:
                     percept = Percept(cell_agent.has_stench, cell_agent.has_breeze, cell_agent.has_glitter, True,
                                       cell_agent.has_scream, self.__is_terminated(cell_agent), 0.0)
@@ -172,8 +174,9 @@ class Environment:
                     new_cell_agent = self._matrix[x][y]
                     new_cell_agent.add_item(agent)
                     is_terminated = self.__is_terminated(new_cell_agent)
+                    new_cell_agent.is_alive = is_terminated == False
 
-                    cell_agent.items.pop(agent)
+                    cell_agent.items.remove(agent)
 
                     percept = Percept(new_cell_agent.has_stench, new_cell_agent.has_breeze, new_cell_agent.has_glitter,
                                       False, new_cell_agent.has_scream, is_terminated, -1)
@@ -194,9 +197,22 @@ class Environment:
 
             case 5:
                 # CLIMB TODO
-                print('Unsupported action.')
-                percept = Percept(cell_agent.has_stench, cell_agent.has_breeze, cell_agent.has_glitter, False,
-                                  cell_agent.has_scream, self.__is_terminated(cell_agent), 0.0)
+                if (self._allow_climb_without_gold == True or (cell_agent.x == 0 and cell_agent == 0)):
+                    x = cell_agent.x
+                    y = cell_agent.y + 1
+                    new_cell_agent = self._matrix[x][y]
+                    new_cell_agent.add_item(agent)
+                    is_terminated = self.__is_terminated(new_cell_agent)
+                    new_cell_agent.is_alive = is_terminated == False
+
+                    cell_agent.items.remove(agent)
+
+                    percept = Percept(new_cell_agent.has_stench, new_cell_agent.has_breeze, new_cell_agent.has_glitter,
+                                      False, new_cell_agent.has_scream, is_terminated, -1)
+
+                else:
+                    percept = Percept(cell_agent.has_stench, cell_agent.has_breeze, cell_agent.has_glitter, False,
+                                      cell_agent.has_scream, self.__is_terminated(cell_agent), 0.0)
 
         print('Player Perception after the moved: {}'.format(percept))
         return percept

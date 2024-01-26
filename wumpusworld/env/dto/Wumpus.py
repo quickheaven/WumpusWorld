@@ -8,4 +8,4 @@ class Wumpus(Item):
         self._name = "WUMPUS"
 
     def __str__(self):
-        return '{}'.format(self._name)
+        return self._name

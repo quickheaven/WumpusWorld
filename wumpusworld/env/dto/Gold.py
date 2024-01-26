@@ -8,4 +8,4 @@ class Gold(Item):
         self._name = "GOLD"
 
     def __str__(self):
-        return '{}'.format(self._name)
+        return self._name
