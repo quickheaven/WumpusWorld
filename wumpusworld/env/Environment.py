@@ -6,7 +6,7 @@ from wumpusworld.enums.Action import Action
 from wumpusworld.enums.CellState import CellState
 from wumpusworld.env.dto.Cell import Cell
 from wumpusworld.env.dto.Gold import Gold
-from wumpusworld.env.dto.Percept import Percept
+from wumpusworld.agent.Percept import Percept
 from wumpusworld.env.dto.Pit import Pit
 from wumpusworld.env.dto.Wumpus import Wumpus
 

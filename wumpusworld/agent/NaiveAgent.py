@@ -2,7 +2,7 @@ import random
 
 from wumpusworld.agent.Agent import Agent
 from wumpusworld.enums.Action import Action
-from wumpusworld.env.dto.Percept import Percept
+from wumpusworld.agent.Percept import Percept
 
 
 class NaiveAgent(Agent):
