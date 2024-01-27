@@ -1,5 +1,6 @@
 from abc import abstractmethod
 
+from wumpusworld.agent.Orientation import Orientation
 from wumpusworld.agent.Percept import Percept
 from wumpusworld.agent.orientation.Coords import Coords
 from wumpusworld.agent.orientation.East import East
@@ -18,6 +19,7 @@ The Agent HAS-A next action that can be Forward, Turn Left, Turn Right, Shoot, G
 class Agent(Item):
 
     def __init__(self):
+        super().__init__()
         self._location = Coords(0, 0)
         self._orientation = East()
         self._has_gold = False
@@ -68,22 +70,6 @@ class Agent(Item):
         self._orientation = self._orientation.turn_right()
 
     def forward(self, grid_width, grid_height):
-        '''
-        new_agent_location = None
-        if isinstance(self._orientation, West):
-            new_agent_location = Coords(max(0, self._location.x - 1), self._location.y)
-
-        elif isinstance(self._orientation, East):
-            new_agent_location = Coords(min(grid_width - 1, self._location.x + 1), self._location.y)
-
-        elif isinstance(self._orientation, South):
-            new_agent_location = Coords(self._location.x, max(0, self._location.y - 1))
-
-        elif isinstance(self._orientation, North):
-            new_agent_location = Coords(self._location.x, min(grid_height - 1, self._location.y + 1))
-
-        self._location = new_agent_location
-        '''
         new_agent_location = None
         if isinstance(self._orientation, West):
             new_agent_location = Coords(self._location.x, max(0, self._location.y - 1))
@@ -100,3 +86,11 @@ class Agent(Item):
         self._location = new_agent_location
 
         return new_agent_location
+
+    @property
+    def orientation(self) -> Orientation:
+        return self._orientation
+
+    @property
+    def location(self) -> Coords:
+        return self._location

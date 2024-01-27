@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+
 class Percept:
 
     def __init__(self, stench: bool, breeze: bool, glitter: bool, bump: bool, scream: bool, is_terminated: bool,
@@ -13,9 +14,9 @@ class Percept:
         self._reward = reward
 
     def __str__(self):
-        return ('Stench: {}, Breeze: {}, Glitter: {}, Bump: {}, Scream: {}, Is_terminated: {}, Reward: {}'
-                .format(self._stench, self._breeze, self._glitter, self._bump, self._screem, self._is_terminated, self._reward))
-
+        return ('PERCEPTION Stench: {}, Breeze: {}, Glitter: {}, Bump: {}, Scream: {}, Is_terminated: {}, Reward: {}'
+                .format(self._stench, self._breeze, self._glitter, self._bump, self._screem, self._is_terminated,
+                        self._reward))
 
     def is_terminated(self):
         return self._is_terminated

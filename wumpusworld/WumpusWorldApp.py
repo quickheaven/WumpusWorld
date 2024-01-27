@@ -4,12 +4,12 @@ from wumpusworld.agent.Percept import Percept
 from wumpusworld.env.Environment import Environment
 
 
-def run_episode(env: Environment, agent: Agent, percept: Percept):
-    if percept.is_terminated():
+def run_episode(env: Environment, agent: Agent, env_percept: Percept):
+    if env_percept.is_terminated():
         print("Game Over.")
     else:
         # Get the next action of the Player
-        action = agent.next_action(percept)
+        action = agent.next_action(env_percept)
 
         # Apply the action of the Player and Get the latest Perception
         percept_result = env.apply_action(action)

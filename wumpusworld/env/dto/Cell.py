@@ -68,7 +68,7 @@ class Cell:  # Room
 
     @property
     def has_pit(self) -> bool:
-        #return lambda self: any(isinstance(item, Pit) for item in self.items)
+        # return lambda self: any(isinstance(item, Pit) for item in self.items)
         for item in self.items:
             if isinstance(item, Pit):
                 return True
@@ -76,7 +76,7 @@ class Cell:  # Room
 
     @property
     def has_wumpus(self) -> bool:
-        #return lambda self: any(isinstance(item, Wumpus) for item in self.items)
+        # return lambda self: any(isinstance(item, Wumpus) for item in self.items)
         for item in self.items:
             if isinstance(item, Wumpus):
                 return True
@@ -84,7 +84,7 @@ class Cell:  # Room
 
     @property
     def has_stench(self) -> bool:
-        #return lambda states: any(state == CellState.STENCH for state in self._cell_states)
+        # return lambda states: any(state == CellState.STENCH for state in self._cell_states)
         for state in self._cell_states:
             if state == CellState.STENCH:
                 return True

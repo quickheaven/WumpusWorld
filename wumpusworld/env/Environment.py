@@ -2,6 +2,10 @@ import random
 from texttable import Texttable
 
 from wumpusworld.agent.Agent import Agent
+from wumpusworld.agent.orientation.East import East
+from wumpusworld.agent.orientation.North import North
+from wumpusworld.agent.orientation.South import South
+from wumpusworld.agent.orientation.West import West
 from wumpusworld.enums.Action import Action
 from wumpusworld.enums.CellState import CellState
 from wumpusworld.env.dto.Cell import Cell
@@ -102,6 +106,19 @@ class Environment:
                         break
         return cell_agent, agent
 
+    def get_cell_wumpus(self):
+        cell_wumpus = None
+        wumpus = None
+        for i in range(len(self._matrix)):
+            for j in range(len(self._matrix[i])):
+                items = self._matrix[i][j].items
+                for item in items:
+                    if isinstance(item, Wumpus):
+                        cell_wumpus = self._matrix[i][j]
+                        wumpus = item
+                        break
+        return cell_wumpus, wumpus
+
     def apply_action(self, action: Action):
 
         action_id = Action.get_by_value(str(action))
@@ -115,159 +132,88 @@ class Environment:
             case 0:
                 new_agent_location = agent.forward(self._width, self._height)
                 new_cell_of_agent = self._matrix[new_agent_location.x][new_agent_location.y]
-                new_cell_of_agent.add_item(agent)
 
                 bump = cell_of_agent.x == new_cell_of_agent.x and cell_of_agent.y == new_cell_of_agent.y
                 death = new_cell_of_agent.has_wumpus or new_cell_of_agent.has_pit
 
                 agent.has_gold = new_cell_of_agent.has_glitter
-                agent.is_alive = death
+                agent.is_alive = not death
 
+                new_cell_of_agent.add_item(agent)
                 cell_of_agent.items.remove(agent)
 
-                percept = Percept(new_cell_of_agent.has_stench, new_cell_of_agent.has_breeze, new_cell_of_agent.has_glitter, bump, new_cell_of_agent.has_scream, death, -1)
+                reward: float = -1
+                if not agent.is_alive:
+                    reward: float = -1001
+
+                percept = Percept(new_cell_of_agent.has_stench, new_cell_of_agent.has_breeze,
+                                  new_cell_of_agent.has_glitter, bump, new_cell_of_agent.has_scream, death, reward)
 
             case 1:
                 agent.turn_left()
-                percept = Percept(cell_of_agent.has_stench, cell_of_agent.has_breeze, cell_of_agent.has_glitter, False, False, False, 0.0)
+                percept = Percept(cell_of_agent.has_stench, cell_of_agent.has_breeze, cell_of_agent.has_glitter, False,
+                                  False, False, -1)
             case 2:
                 agent.turn_right()
-                percept = Percept(cell_of_agent.has_stench, cell_of_agent.has_breeze, cell_of_agent.has_glitter, False, False, False, 0.0)
+                percept = Percept(cell_of_agent.has_stench, cell_of_agent.has_breeze, cell_of_agent.has_glitter, False,
+                                  False, False, -1)
             case 3:
-                print('Unsupported action: Grab')
-                percept = Percept(cell_of_agent.has_stench, cell_of_agent.has_breeze, cell_of_agent.has_glitter, False, False, False, 0.0)
+                agent.has_gold = cell_of_agent.has_glitter
+
+                percept = Percept(cell_of_agent.has_stench, cell_of_agent.has_breeze, cell_of_agent.has_glitter, False,
+                                  False, False, -1)
             case 4:
-                print('Unsupported action: Climb')
-                percept = Percept(cell_of_agent.has_stench, cell_of_agent.has_breeze, cell_of_agent.has_glitter, False, False, False, 0.0)
+                in_start_location: bool = cell_of_agent.x == 0 and cell_of_agent.y == 0
+                success: bool = agent.has_gold and in_start_location
+                is_terminated: bool = success or (self._allow_climb_without_gold and in_start_location)
+                reward: float = -1
+                if success:
+                    reward = 999
+
+                percept = Percept(cell_of_agent.has_stench, cell_of_agent.has_breeze, cell_of_agent.has_glitter, False,
+                                  False, is_terminated, reward)
             case 5:
-                print('Unsupported action: Shoot')
-                percept = Percept(cell_of_agent.has_stench, cell_of_agent.has_breeze, cell_of_agent.has_glitter, False, False, False, 0.0)
+                had_arrow: bool = agent.has_arrow
+
+                wumpus_killed: bool = self.__kill_attempt_successful(agent)
+                agent.has_arrow = False
+
+                reward: float = -1
+                if had_arrow:
+                    reward: float = -11
+
+                percept = Percept(cell_of_agent.has_stench, cell_of_agent.has_breeze, cell_of_agent.has_glitter, False,
+                                  False, wumpus_killed, reward)
 
         print(agent.to_string())
         print(percept)
         return percept
 
+    def __kill_attempt_successful(self, agent: Agent) -> bool:
+        cell_wumpus, wumpus = self.get_cell_wumpus()
 
-    '''
-    def apply_action_v1(self, action: Action):
-        print('Action: {}'.format(action))
-        action_id = Action.get_by_value(str(action))
+        wumpus_in_line_of_fire: bool = False
+        if isinstance(agent.orientation, West):
+            wumpus_in_line_of_fire = agent.location.x == cell_wumpus.x and agent.location.y > cell_wumpus.y
 
-        # TODO
-        # a. Study the scala implementation about coordinates.
-        # b. Find a way to improve the use of CASE statement in Python
-        # c. Remove the Agent from its previous cell. (DONE)
-        # d. Develop the concept of Coordinates and find a better way to move around the matrix. Find a better way to limit the movement of the agent within the matrix.
-        # f. Develop other actions.
-        # g. Develop the concept of rewards.
-        cell_agent, agent = self.get_cell_agent()
+        elif isinstance(agent.orientation, East):
+            wumpus_in_line_of_fire = agent.location.x == cell_wumpus.x and agent.location.y < cell_wumpus.y
 
-        percept = None
-        match action_id:
-            case 0:
-                # FORWARD
-                x = cell_agent.x
-                y = cell_agent.y + 1
-                print('OldCell x:{}, y: {} -- NewCell: x:{}, y:{}'.format(cell_agent.x, cell_agent.y, x, y))
+        elif isinstance(agent.orientation, South):
+            wumpus_in_line_of_fire = agent.location.x > cell_wumpus.x and agent.location.y == cell_wumpus.y
 
-                is_bump = x > self._width or y > self._height
-                # is_bump = x > self._width - 1
-                if is_bump:
-                    percept = Percept(cell_agent.has_stench, cell_agent.has_breeze, cell_agent.has_glitter, True,
-                                      cell_agent.has_scream, self.__is_terminated(cell_agent), 0.0)
-                else:
-                    new_cell_agent = self._matrix[x][y]
-                    new_cell_agent.add_item(agent)
-                    is_terminated = self.__is_terminated(new_cell_agent)
+        elif isinstance(agent.orientation, North):
+            wumpus_in_line_of_fire = agent.location.x < cell_wumpus.x and agent.location.y == cell_wumpus.y
 
-                    cell_agent.items.remove(agent)
+        wumpus_killed = agent.has_arrow and wumpus_in_line_of_fire and wumpus_in_line_of_fire
+        wumpus.is_alive = not wumpus_killed
+        print(
+            'Orientation: {} AgentLocation:[{}][{}] WumpusLocation:[{}][{}]'.format(agent.orientation, agent.location.x,
+                                                                                    agent.location.y, cell_wumpus.x,
+                                                                                    cell_wumpus.y))
 
-                    percept = Percept(new_cell_agent.has_stench, new_cell_agent.has_breeze, new_cell_agent.has_glitter,
-                                      False, new_cell_agent.has_scream, is_terminated, -1)
+        return wumpus_killed
 
-            case 1:
-                # TURN_LEFT
-                x = cell_agent.x + 1
-                y = cell_agent.y - 1
-                print('OldCell x:{}, y: {} -- NewCell: x:{}, y:{}'.format(cell_agent.x, cell_agent.y, x, y))
-
-                # is_bump = y == -1
-                is_bump = x > self._width - 1
-                if is_bump:
-                    percept = Percept(cell_agent.has_stench, cell_agent.has_breeze, cell_agent.has_glitter, True,
-                                      cell_agent.has_scream, self.__is_terminated(cell_agent), 0.0)
-                else:
-                    new_cell_agent = self._matrix[x][y]
-                    new_cell_agent.add_item(agent)
-                    is_terminated = self.__is_terminated(new_cell_agent)
-                    new_cell_agent.is_alive = is_terminated == False
-
-                    cell_agent.items.remove(agent)
-
-                    percept = Percept(new_cell_agent.has_stench, new_cell_agent.has_breeze, new_cell_agent.has_glitter,
-                                      False, new_cell_agent.has_scream, is_terminated, -1)
-
-            case 2:
-                # TURN_RIGHT
-                x = cell_agent.x + 1
-                y = cell_agent.y + 1
-                print('OldCell x:{}, y: {} -- NewCell: x:{}, y:{}'.format(cell_agent.x, cell_agent.y, x, y))
-
-                is_bump = x > self._width - 1
-                if is_bump:
-                    percept = Percept(cell_agent.has_stench, cell_agent.has_breeze, cell_agent.has_glitter, True,
-                                      cell_agent.has_scream, self.__is_terminated(cell_agent), 0.0)
-                else:
-                    new_cell_agent = self._matrix[x][y]
-                    new_cell_agent.add_item(agent)
-                    is_terminated = self.__is_terminated(new_cell_agent)
-                    new_cell_agent.is_alive = is_terminated == False
-
-                    cell_agent.items.remove(agent)
-
-                    percept = Percept(new_cell_agent.has_stench, new_cell_agent.has_breeze, new_cell_agent.has_glitter,
-                                      False, new_cell_agent.has_scream, is_terminated, -1)
-
-            case 3:
-                # SHOOT TODO
-                print('Unsupported action.')
-                percept = Percept(cell_agent.has_stench, cell_agent.has_breeze, cell_agent.has_glitter, False,
-                                  cell_agent.has_scream, self.__is_terminated(cell_agent), 0.0)
-
-            case 4:
-                # GRAB TODO
-                print('Unsupported action.')
-                percept = Percept(cell_agent.has_stench, cell_agent.has_breeze, cell_agent.has_glitter, False,
-                                  cell_agent.has_scream, self.__is_terminated(cell_agent), 0.0)
-                print(percept)
-                return percept
-
-            case 5:
-                # CLIMB TODO
-                if (self._allow_climb_without_gold == True or (cell_agent.x == 0 and cell_agent == 0)):
-                    x = cell_agent.x
-                    y = cell_agent.y + 1
-                    new_cell_agent = self._matrix[x][y]
-                    new_cell_agent.add_item(agent)
-                    is_terminated = self.__is_terminated(new_cell_agent)
-                    new_cell_agent.is_alive = is_terminated == False
-
-                    cell_agent.items.remove(agent)
-
-                    percept = Percept(new_cell_agent.has_stench, new_cell_agent.has_breeze, new_cell_agent.has_glitter,
-                                      False, new_cell_agent.has_scream, is_terminated, -1)
-
-                else:
-                    percept = Percept(cell_agent.has_stench, cell_agent.has_breeze, cell_agent.has_glitter, False,
-                                      cell_agent.has_scream, self.__is_terminated(cell_agent), 0.0)
-
-        print('Player Perception after the moved: {}'.format(percept))
-        return percept
-
-    def __is_terminated(self, cell: Cell):
-        return cell.has_wumpus or cell.has_pit
-
-    '''
 
 if __name__ == '__main__':
     print('Creating environment')

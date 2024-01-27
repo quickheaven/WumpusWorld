@@ -12,7 +12,10 @@ class NaiveAgent(Agent):
         self._name = "NAIVE_AGENT"
 
     def __str__(self):
-        return self._name
+        is_alive_str: str = 'A'
+        if not self.is_alive:
+            is_alive_str = 'D'
+        return '{} ({})'.format(self._name, is_alive_str)
 
     def next_action(self, percept: Percept) -> Action:
         random_action_int: int = random.randint(0, 5)
@@ -20,4 +23,4 @@ class NaiveAgent(Agent):
 
     def to_string(self) -> str:
         parent_class_str = super().__str__()
-        return '{} ({})'.format(self._name, parent_class_str)
+        return '{} {}'.format(self._name, parent_class_str)
