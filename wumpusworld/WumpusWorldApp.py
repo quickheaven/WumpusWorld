@@ -1,7 +1,7 @@
 from wumpusworld.agent.Agent import Agent
 from wumpusworld.agent.NaiveAgent import NaiveAgent
-from wumpusworld.env.Environment import Environment
 from wumpusworld.agent.Percept import Percept
+from wumpusworld.env.Environment import Environment
 
 
 def run_episode(env: Environment, agent: Agent, percept: Percept):

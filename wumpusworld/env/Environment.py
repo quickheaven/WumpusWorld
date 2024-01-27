@@ -103,6 +103,53 @@ class Environment:
         return cell_agent, agent
 
     def apply_action(self, action: Action):
+
+        action_id = Action.get_by_value(str(action))
+        print('Action: {}'.format(action))
+
+        cell_of_agent, agent = self.get_cell_agent()
+
+        percept = None
+
+        match action_id:
+            case 0:
+                new_agent_location = agent.forward(self._width, self._height)
+                new_cell_of_agent = self._matrix[new_agent_location.x][new_agent_location.y]
+                new_cell_of_agent.add_item(agent)
+
+                bump = cell_of_agent.x == new_cell_of_agent.x and cell_of_agent.y == new_cell_of_agent.y
+                death = new_cell_of_agent.has_wumpus or new_cell_of_agent.has_pit
+
+                agent.has_gold = new_cell_of_agent.has_glitter
+                agent.is_alive = death
+
+                cell_of_agent.items.remove(agent)
+
+                percept = Percept(new_cell_of_agent.has_stench, new_cell_of_agent.has_breeze, new_cell_of_agent.has_glitter, bump, new_cell_of_agent.has_scream, death, -1)
+
+            case 1:
+                agent.turn_left()
+                percept = Percept(cell_of_agent.has_stench, cell_of_agent.has_breeze, cell_of_agent.has_glitter, False, False, False, 0.0)
+            case 2:
+                agent.turn_right()
+                percept = Percept(cell_of_agent.has_stench, cell_of_agent.has_breeze, cell_of_agent.has_glitter, False, False, False, 0.0)
+            case 3:
+                print('Unsupported action: Grab')
+                percept = Percept(cell_of_agent.has_stench, cell_of_agent.has_breeze, cell_of_agent.has_glitter, False, False, False, 0.0)
+            case 4:
+                print('Unsupported action: Climb')
+                percept = Percept(cell_of_agent.has_stench, cell_of_agent.has_breeze, cell_of_agent.has_glitter, False, False, False, 0.0)
+            case 5:
+                print('Unsupported action: Shoot')
+                percept = Percept(cell_of_agent.has_stench, cell_of_agent.has_breeze, cell_of_agent.has_glitter, False, False, False, 0.0)
+
+        print(agent.to_string())
+        print(percept)
+        return percept
+
+
+    '''
+    def apply_action_v1(self, action: Action):
         print('Action: {}'.format(action))
         action_id = Action.get_by_value(str(action))
 
@@ -220,6 +267,7 @@ class Environment:
     def __is_terminated(self, cell: Cell):
         return cell.has_wumpus or cell.has_pit
 
+    '''
 
 if __name__ == '__main__':
     print('Creating environment')

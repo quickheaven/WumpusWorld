@@ -1,7 +1,11 @@
 from abc import abstractmethod
 
-from wumpusworld.agent.orientation.East import East
 from wumpusworld.agent.Percept import Percept
+from wumpusworld.agent.orientation.Coords import Coords
+from wumpusworld.agent.orientation.East import East
+from wumpusworld.agent.orientation.North import North
+from wumpusworld.agent.orientation.South import South
+from wumpusworld.agent.orientation.West import West
 from wumpusworld.enums.Action import Action
 from wumpusworld.env.dto.Item import Item
 
@@ -14,16 +18,23 @@ The Agent HAS-A next action that can be Forward, Turn Left, Turn Right, Shoot, G
 class Agent(Item):
 
     def __init__(self):
+        self._location = Coords(0, 0)
         self._orientation = East()
         self._has_gold = False
         self._has_arrow = True
         self._is_alive = True
 
     def __str__(self):
-        return "Gold: {}, Arrow: {}, Alive: {}".format(self._has_gold, self._has_arrow, self._is_alive)
+        return "Gold: {}, Arrow: {}, Alive: {}, Coords: {}, Orientation: {}".format(self._has_gold, self._has_arrow,
+                                                                                    self._is_alive, self._location,
+                                                                                    self._orientation)
 
     @abstractmethod
     def next_action(self, percept: Percept) -> Action:
+        pass
+
+    @abstractmethod
+    def to_string(self) -> str:
         pass
 
     @property
@@ -51,24 +62,41 @@ class Agent(Item):
         self._is_alive = is_alive
 
     def turn_left(self):
-        pass
+        self._orientation = self._orientation.turn_left()
 
     def turn_right(self):
-        pass
+        self._orientation = self._orientation.turn_right()
 
-    def forward(self):
-        pass
+    def forward(self, grid_width, grid_height):
+        '''
+        new_agent_location = None
+        if isinstance(self._orientation, West):
+            new_agent_location = Coords(max(0, self._location.x - 1), self._location.y)
 
-    '''
-      def turnLeft: Agent = this.copy(orientation = orientation.turnLeft)
-      def turnRight: Agent = this.copy(orientation = orientation.turnRight)
-      def forward(gridWidth: Int, gridHeight: Int): Agent = {
-        val newAgentLocation: Coords = orientation match {
-          case West => Coords(max(0, location.x - 1), location.y)
-          case East => Coords(min(gridWidth - 1, location.x + 1), location.y)
-          case South => Coords(location.x, max(0, location.y - 1))
-          case North => Coords(location.x, min(gridHeight - 1, location.y + 1))
-        }
-        this.copy(location = newAgentLocation)
-  }
-    '''
+        elif isinstance(self._orientation, East):
+            new_agent_location = Coords(min(grid_width - 1, self._location.x + 1), self._location.y)
+
+        elif isinstance(self._orientation, South):
+            new_agent_location = Coords(self._location.x, max(0, self._location.y - 1))
+
+        elif isinstance(self._orientation, North):
+            new_agent_location = Coords(self._location.x, min(grid_height - 1, self._location.y + 1))
+
+        self._location = new_agent_location
+        '''
+        new_agent_location = None
+        if isinstance(self._orientation, West):
+            new_agent_location = Coords(self._location.x, max(0, self._location.y - 1))
+
+        elif isinstance(self._orientation, East):
+            new_agent_location = Coords(self._location.x, min(grid_height - 1, self._location.y + 1))
+
+        elif isinstance(self._orientation, South):
+            new_agent_location = Coords(max(0, self._location.x - 1), self._location.y)
+
+        elif isinstance(self._orientation, North):
+            new_agent_location = Coords(min(grid_width - 1, self._location.x + 1), self._location.y)
+
+        self._location = new_agent_location
+
+        return new_agent_location
