@@ -35,6 +35,8 @@ class Environment:
         self._allow_climb_without_gold = allow_climb_without_gold
         self._pit_prob = pit_prob
 
+        #print('Initializing Game...')
+        #print('Grid width: {}, Grid height: {}, _allow_climb_without_gold: {}, pit_prob: {}'.format(self._width, self._height, self._allow_climb_without_gold, self._pit_prob))
         self.__reset()
 
     def __reset(self):
@@ -56,14 +58,20 @@ class Environment:
         for cell in adjacent_cells:
             cell.add_cell_state(CellState.STENCH)
 
-        # TODO used _pit_prob
-        matrix_excluding_first_two_element = [x[2:] for x in self._matrix]
-        cell_pit = random.choice(random.choice(matrix_excluding_first_two_element))
-        if cell_pit.is_empty():
-            cell_pit.add_item(Pit())
-            adjacent_cells = self.__find_adjacent_cells(cell_pit)
-            for cell in adjacent_cells:
-                cell.add_cell_state(CellState.BREEZE)
+        pit_locations = []
+        cell_indexes = [(x, y) for x in range(self._width) for y in range(self._height)]
+        for cell in cell_indexes[1:]:
+            if random.random() < self._pit_prob:
+                pit_locations.append(cell)
+
+        #print('Pit Locations: {}'.format(pit_locations))
+        for pit_loc in pit_locations:
+            cell_pit = self._matrix[pit_loc[0]][pit_loc[1]]
+            if cell_pit.is_empty():
+                cell_pit.add_item(Pit())
+                adjacent_cells = self.__find_adjacent_cells(cell_pit)
+                for cell in adjacent_cells:
+                    cell.add_cell_state(CellState.BREEZE)
 
     def __find_adjacent_cells(self, cell: Cell):
         x = cell.x
