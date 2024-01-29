@@ -8,11 +8,12 @@ from wumpusworld.env.dto.Wumpus import Wumpus
 
 class Cell:  # Room
 
-    def __init__(self, x, y):
+    def __init__(self, x, y, index_display_start_on_zero: bool = False):
         self._x = x
         self._y = y
         self._items = []
         self._cell_states = []
+        self._index_display_start_on_zero = index_display_start_on_zero
 
     def __str__(self):
         items = ""
@@ -23,11 +24,13 @@ class Cell:  # Room
         if len(self._cell_states) > 0:
             sensors = " ".join(CellState.get_by_id(x) for x in self._cell_states)
 
-        # label_x = self._x + 1
-        # label_y = self._y + 1
-        # return 'Cell [{}][{}]: [{},{}] {}\n{}'.format(self._x, self._y, label_x, label_y, items, sensors)
+        label_x = self._x
+        label_y = self._y
+        if not self._index_display_start_on_zero:
+            label_x = self._x + 1
+            label_y = self._y + 1
 
-        return 'Cell [{}][{}]: {}\n{}'.format(self._x, self._y, items, sensors)
+        return 'Cell [{}][{}]: {}\n{}'.format(label_x, label_y, items, sensors)
 
     @property
     def x(self):
@@ -68,7 +71,6 @@ class Cell:  # Room
 
     @property
     def has_pit(self) -> bool:
-        # return lambda self: any(isinstance(item, Pit) for item in self.items)
         for item in self.items:
             if isinstance(item, Pit):
                 return True
@@ -76,7 +78,6 @@ class Cell:  # Room
 
     @property
     def has_wumpus(self) -> bool:
-        # return lambda self: any(isinstance(item, Wumpus) for item in self.items)
         for item in self.items:
             if isinstance(item, Wumpus):
                 return True
@@ -84,7 +85,6 @@ class Cell:  # Room
 
     @property
     def has_stench(self) -> bool:
-        # return lambda states: any(state == CellState.STENCH for state in self._cell_states)
         for state in self._cell_states:
             if state == CellState.STENCH:
                 return True

@@ -29,11 +29,12 @@ The Agent HAS-A access to 'Perception'.
 
 class Environment:
 
-    def __init__(self, width, height, allow_climb_without_gold=False, pit_prob=0.2):
+    def __init__(self, width, height, allow_climb_without_gold=False, pit_prob=0.2, index_display_start_on_zero: bool = False):
         self._width = width
         self._height = height
         self._allow_climb_without_gold = allow_climb_without_gold
         self._pit_prob = pit_prob
+        self._index_display_start_on_zero = index_display_start_on_zero
 
         #print('Initializing Game...')
         #print('Grid width: {}, Grid height: {}, _allow_climb_without_gold: {}, pit_prob: {}'.format(self._width, self._height, self._allow_climb_without_gold, self._pit_prob))
@@ -42,7 +43,7 @@ class Environment:
     def __reset(self):
         # Build the initial matrix
         # The matrix is also the Cave while the Cell is the Room.
-        self._matrix = [[Cell(x, y) for y in range(self._height)] for x in range(self._width)]
+        self._matrix = [[Cell(x, y, self._index_display_start_on_zero) for y in range(self._height)] for x in range(self._width)]
 
         # Put the Gold, Pit and Wumpus in random Cell (excluding the first Cell).
         matrix_excluding_first_element = [x[1:] for x in self._matrix]
@@ -216,7 +217,7 @@ class Environment:
         wumpus_killed = agent.has_arrow and wumpus_in_line_of_fire and wumpus_in_line_of_fire
         wumpus.is_alive = not wumpus_killed
         print(
-            'Orientation: {} AgentLocation:[{}][{}] WumpusLocation:[{}][{}]'.format(agent.orientation, agent.location.x,
+            'Orientation: {} AgentLocation:[{}][{}] WumpusLocation:[{}][{}] WumpusAlive: {}'.format(agent.orientation, agent.location.x,
                                                                                     agent.location.y, cell_wumpus.x,
                                                                                     cell_wumpus.y))
 
