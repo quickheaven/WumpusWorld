@@ -14,7 +14,7 @@ class Percept:
         self._reward = reward
 
     def __str__(self):
-        return ('PERCEPTION Stench: {}, Breeze: {}, Glitter: {}, Bump: {}, Scream: {}, Is_terminated: {}, Reward: {}'
+        return ('PERCEPTION Stench: {}, Breeze: {}, Glitter: {}, Bump: {}, Scream: {}, Is_Terminated: {}, Reward: {}'
                 .format(self._stench, self._breeze, self._glitter, self._bump, self._screem, self._is_terminated,
                         self._reward))
 

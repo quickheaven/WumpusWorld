@@ -29,21 +29,23 @@ The Agent HAS-A access to 'Perception'.
 
 class Environment:
 
-    def __init__(self, width, height, allow_climb_without_gold=False, pit_prob=0.2, index_display_start_on_zero: bool = False):
+    def __init__(self, width, height, allow_climb_without_gold=False, pit_prob=0.2,
+                 index_display_start_on_zero: bool = False):
         self._width = width
         self._height = height
         self._allow_climb_without_gold = allow_climb_without_gold
         self._pit_prob = pit_prob
         self._index_display_start_on_zero = index_display_start_on_zero
 
-        #print('Initializing Game...')
-        #print('Grid width: {}, Grid height: {}, _allow_climb_without_gold: {}, pit_prob: {}'.format(self._width, self._height, self._allow_climb_without_gold, self._pit_prob))
+        # print('Initializing Game...')
+        # print('Grid width: {}, Grid height: {}, _allow_climb_without_gold: {}, pit_prob: {}'.format(self._width, self._height, self._allow_climb_without_gold, self._pit_prob))
         self.__reset()
 
     def __reset(self):
         # Build the initial matrix
         # The matrix is also the Cave while the Cell is the Room.
-        self._matrix = [[Cell(x, y, self._index_display_start_on_zero) for y in range(self._height)] for x in range(self._width)]
+        self._matrix = [[Cell(x, y, self._index_display_start_on_zero) for y in range(self._height)] for x in
+                        range(self._width)]
 
         # Put the Gold, Pit and Wumpus in random Cell (excluding the first Cell).
         matrix_excluding_first_element = [x[1:] for x in self._matrix]
@@ -65,7 +67,7 @@ class Environment:
             if random.random() < self._pit_prob:
                 pit_locations.append(cell)
 
-        #print('Pit Locations: {}'.format(pit_locations))
+        # print('Pit Locations: {}'.format(pit_locations))
         for pit_loc in pit_locations:
             cell_pit = self._matrix[pit_loc[0]][pit_loc[1]]
             if cell_pit.is_empty():
@@ -143,7 +145,10 @@ class Environment:
                 new_cell_of_agent = self._matrix[new_agent_location.x][new_agent_location.y]
 
                 bump = cell_of_agent.x == new_cell_of_agent.x and cell_of_agent.y == new_cell_of_agent.y
-                death = new_cell_of_agent.has_wumpus or new_cell_of_agent.has_pit
+
+                cell_wumpus, wumpus = self.get_cell_wumpus()
+
+                death = (new_cell_of_agent.has_wumpus and wumpus.is_alive) or new_cell_of_agent.has_pit
 
                 agent.has_gold = new_cell_of_agent.has_glitter
                 agent.is_alive = not death
@@ -217,9 +222,12 @@ class Environment:
         wumpus_killed = agent.has_arrow and wumpus_in_line_of_fire and wumpus_in_line_of_fire
         wumpus.is_alive = not wumpus_killed
         print(
-            'Orientation: {} AgentLocation:[{}][{}] WumpusLocation:[{}][{}] WumpusAlive: {}'.format(agent.orientation, agent.location.x,
-                                                                                    agent.location.y, cell_wumpus.x,
-                                                                                    cell_wumpus.y))
+            'Orientation: {} Agent_Location:[{}][{}] Wumpus_Location:[{}][{}] Wumpus_Alive: {}'.format(agent.orientation,
+                                                                                                    agent.location.x,
+                                                                                                    agent.location.y,
+                                                                                                    cell_wumpus.x,
+                                                                                                    cell_wumpus.y,
+                                                                                                    wumpus.is_alive))
 
         return wumpus_killed
 
