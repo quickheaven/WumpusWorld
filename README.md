@@ -1,6 +1,19 @@
 # WumpusWorld
 
+@author Arjie Cristobal
+<pre>
+The app was developed using OOP with Python. The basic design is based on the following: <br/>
+A. The Wumpus World HAS-A Environment.
+  Environment HAS-A Matrix (Cave).
+  Each element of Matrix IS-A Cell (Room).
+  The Cell HAS-A Item(s) that can be Gold, Pit and Wumpus (extends the Item).
+  The Cell HAS-A State(s) that can be Stench, Breeze, Glitter, Scream.
 
+B. The Wumpus World also HAS-A Agent (Player) that will explore the Environment.
+  The Agent have a behavior to perform the 'next action' which can be Forward, Turn Left, Turn Right, Shoot, Grab and Climb.
+  The Agent HAS-A 'Orientation' and 'Perception'.
+  
+</pre>
 Below is sample start and game ends.
 
 *The Environment parameter index_display_start_on_zero is set to False.*
