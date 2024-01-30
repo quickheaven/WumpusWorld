@@ -14,18 +14,6 @@ from wumpusworld.agent.Percept import Percept
 from wumpusworld.env.dto.Pit import Pit
 from wumpusworld.env.dto.Wumpus import Wumpus
 
-'''
-Wumpus World HAS-A Environment:
-Environment HAS-A Matrix (Cave).
-Each element of Matrix IS-A Cell (Room).
-The Cell HAS-A Item(s) that can be Gold, Pit and Wumpus (extends the Item).
-The Cell HAS-A State(s) that can be Stench, Breeze, Glitter, Scream. 
-
-Wumpus World HAS-A Agent:
-The Agent HAS-A next action that can be Forward, Turn Left, Turn Right, Shoot, Grab and Climb.
-The Agent HAS-A access to 'Perception'.
-'''
-
 
 class Environment:
 
@@ -80,25 +68,18 @@ class Environment:
         x = cell.x
         y = cell.y
         adjacent_cells = []
-        # I researched this from the internet.
         for i in range(x - 1, x + 2):
             for j in range(y - 1, y + 2):
                 if 0 <= i < self._width and 0 <= j < self._height and (i, j) != (x, y) and abs(i - x) + abs(j - y) == 1:
                     adjacent_cells.append(self._matrix[i][j])
         return adjacent_cells
 
-    def draw(self):
+    def visualize(self):
         table = Texttable()
         table.add_rows(self._matrix[::-1]
                        # This will reverse the order so the bottom index [0][0] will be displayed in the bottom.
                        , header=None)
         print(table.draw())
-
-        # table = Texttable()
-        # table.add_rows(self._matrix
-        # This will reverse the order so the bottom index [0][0] will be displayed in the bottom.
-        #               , header=None)
-        # print(table.draw())
 
     def add_agent(self, agent: Agent):
         cell_agent = self._matrix[0][0]
@@ -153,6 +134,12 @@ class Environment:
                 agent.has_gold = new_cell_of_agent.has_glitter
                 agent.is_alive = not death
 
+                if not agent.is_alive:
+                    if new_cell_of_agent.has_pit:
+                        print('The Agent dies a miserable death because it enters a cell containing a Pit.')
+                    if new_cell_of_agent.has_wumpus:
+                        print('The Agent dies a miserable death because it enters a cell containing a live Wumpus.')
+
                 new_cell_of_agent.add_item(agent)
                 cell_of_agent.items.remove(agent)
 
@@ -192,6 +179,11 @@ class Environment:
                 wumpus_killed: bool = self.__kill_attempt_successful(agent)
                 agent.has_arrow = False
 
+                if wumpus_killed:
+                    print('The Agent killed the Wumpus.')
+                else:
+                    print('The Agent failed to kill the Wumpus.')
+
                 reward: float = -1
                 if had_arrow:
                     reward: float = -11
@@ -222,12 +214,13 @@ class Environment:
         wumpus_killed = agent.has_arrow and wumpus_in_line_of_fire and wumpus_in_line_of_fire
         wumpus.is_alive = not wumpus_killed
         print(
-            'Orientation: {} Agent_Location:[{}][{}] Wumpus_Location:[{}][{}] Wumpus_Alive: {}'.format(agent.orientation,
-                                                                                                    agent.location.x,
-                                                                                                    agent.location.y,
-                                                                                                    cell_wumpus.x,
-                                                                                                    cell_wumpus.y,
-                                                                                                    wumpus.is_alive))
+            'Orientation: {} Agent_Location:[{}][{}] Wumpus_Location:[{}][{}] Wumpus_Alive: {}'.format(
+                agent.orientation,
+                agent.location.x,
+                agent.location.y,
+                cell_wumpus.x,
+                cell_wumpus.y,
+                wumpus.is_alive))
 
         return wumpus_killed
 
@@ -235,4 +228,4 @@ class Environment:
 if __name__ == '__main__':
     print('Creating environment')
     env = Environment(4, 4)
-    env.draw()
+    env.visualize()

@@ -44,20 +44,12 @@ class Cell:  # Room
     def items(self):
         return self._items
 
-    # @item.setter
-    # def item(self, item: Item) -> None:
-    #    self._item = item
-
     def add_item(self, item: Item):
         self._items.append(item)
 
     @property
     def cell_states(self):
         return self._cell_states
-
-    # @sensorStates.setter
-    # def sensorState(self, sensorState: SensorState) -> None:
-    #   self._sensorStates = sensorState
 
     def add_cell_state(self, cell_state: CellState) -> int:
         if cell_state in self._cell_states:

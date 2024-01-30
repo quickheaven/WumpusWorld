@@ -10,11 +10,6 @@ from wumpusworld.agent.orientation.West import West
 from wumpusworld.enums.Action import Action
 from wumpusworld.env.dto.Item import Item
 
-"""
-Wumpus World HAS-A Agent:
-The Agent HAS-A next action that can be Forward, Turn Left, Turn Right, Shoot, Grab and Climb.
-"""
-
 
 class Agent(Item):
 
