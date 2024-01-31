@@ -25,8 +25,8 @@ class Environment:
         self._pit_prob = pit_prob
         self._index_display_start_on_zero = index_display_start_on_zero
 
-        # print('Initializing Game...')
-        # print('Grid width: {}, Grid height: {}, _allow_climb_without_gold: {}, pit_prob: {}'.format(self._width, self._height, self._allow_climb_without_gold, self._pit_prob))
+        # print('Initializing Game...') print('Grid width: {}, Grid height: {}, _allow_climb_without_gold: {},
+        # pit_prob: {}'.format(self._width, self._height, self._allow_climb_without_gold, self._pit_prob))
         self.__reset()
 
     def __reset(self):
@@ -68,6 +68,8 @@ class Environment:
         x = cell.x
         y = cell.y
         adjacent_cells = []
+        # I could have use similar approach from Scala example but decided to keep using this approach since it took me
+        # time to worked on this and I have to check the internet to figure this out.
         for i in range(x - 1, x + 2):
             for j in range(y - 1, y + 2):
                 if 0 <= i < self._width and 0 <= j < self._height and (i, j) != (x, y) and abs(i - x) + abs(j - y) == 1:
@@ -120,8 +122,9 @@ class Environment:
 
         percept = None
 
+        # I copied the similar approach from Scala example.
         match action_id:
-            case 0:
+            case 0:  # FORWARD
                 new_agent_location = agent.forward(self._width, self._height)
                 new_cell_of_agent = self._matrix[new_agent_location.x][new_agent_location.y]
 
@@ -150,20 +153,20 @@ class Environment:
                 percept = Percept(new_cell_of_agent.has_stench, new_cell_of_agent.has_breeze,
                                   new_cell_of_agent.has_glitter, bump, new_cell_of_agent.has_scream, death, reward)
 
-            case 1:
+            case 1:  # TURN LEFT
                 agent.turn_left()
                 percept = Percept(cell_of_agent.has_stench, cell_of_agent.has_breeze, cell_of_agent.has_glitter, False,
                                   False, False, -1)
-            case 2:
+            case 2:  # TURN RIGHT
                 agent.turn_right()
                 percept = Percept(cell_of_agent.has_stench, cell_of_agent.has_breeze, cell_of_agent.has_glitter, False,
                                   False, False, -1)
-            case 3:
+            case 3:  # GRAB
                 agent.has_gold = cell_of_agent.has_glitter
 
                 percept = Percept(cell_of_agent.has_stench, cell_of_agent.has_breeze, cell_of_agent.has_glitter, False,
                                   False, False, -1)
-            case 4:
+            case 4:  # CLIMB
                 in_start_location: bool = cell_of_agent.x == 0 and cell_of_agent.y == 0
                 success: bool = agent.has_gold and in_start_location
                 is_terminated: bool = success or (self._allow_climb_without_gold and in_start_location)
@@ -173,7 +176,7 @@ class Environment:
 
                 percept = Percept(cell_of_agent.has_stench, cell_of_agent.has_breeze, cell_of_agent.has_glitter, False,
                                   False, is_terminated, reward)
-            case 5:
+            case 5:  # SHOOT
                 had_arrow: bool = agent.has_arrow
 
                 wumpus_killed: bool = self.__kill_attempt_successful(agent)
@@ -181,6 +184,8 @@ class Environment:
 
                 if wumpus_killed:
                     print('The Agent killed the Wumpus.')
+                    # I was thinking if I should add a Scream to every Cell if the Wumpus is killed. But since the Scala
+                    # version didn't do it, I decided not to add the Scream in all Cell.
                 else:
                     print('The Agent failed to kill the Wumpus.')
 
@@ -198,6 +203,7 @@ class Environment:
     def __kill_attempt_successful(self, agent: Agent) -> bool:
         cell_wumpus, wumpus = self.get_cell_wumpus()
 
+        # Implementation inspired by Scala version.
         wumpus_in_line_of_fire: bool = False
         if isinstance(agent.orientation, West):
             wumpus_in_line_of_fire = agent.location.x == cell_wumpus.x and agent.location.y > cell_wumpus.y

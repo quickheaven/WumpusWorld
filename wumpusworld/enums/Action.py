@@ -5,6 +5,6 @@ class Action:
         dictio = {v: k for k, v in Action.__dict__.items() if not k.startswith("__")}
         return dictio.get(p_id)
 
-    def get_by_value(p_value):
+    def get_by_value(p_value: str):
         dictio = {k: v for k, v in Action.__dict__.items() if not k.startswith("__")}
         return dictio.get(p_value)

@@ -6,13 +6,19 @@ from wumpusworld.env.dto.Pit import Pit
 from wumpusworld.env.dto.Wumpus import Wumpus
 
 
-class Cell:  # Room
+class Cell:  # This can be considered the Room in a Cave.
 
     def __init__(self, x, y, index_display_start_on_zero: bool = False):
         self._x = x
         self._y = y
+
+        # I decided to make this as a List because I would like the Cell to be capable of holding multiple Items at the
+        # same time. This will allow to display both Agent and Pit or Wumpus in a single Cell.
         self._items = []
+
+        # Define this as List so multiple State such as Breeze and Stench can be sense in a same Cell.
         self._cell_states = []
+
         self._index_display_start_on_zero = index_display_start_on_zero
 
     def __str__(self):
@@ -52,6 +58,7 @@ class Cell:  # Room
         return self._cell_states
 
     def add_cell_state(self, cell_state: CellState) -> int:
+        # Prevent duplicates. Only add the state of the Cell if it's not yet existing.
         if cell_state in self._cell_states:
             return 0
         else:

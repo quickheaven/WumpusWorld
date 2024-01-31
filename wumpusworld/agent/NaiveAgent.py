@@ -12,9 +12,9 @@ class NaiveAgent(Agent):
         self._name = "NAIVE_AGENT"
 
     def __str__(self):
-        is_alive_str: str = 'A'
+        is_alive_str: str = 'A'  # Alive
         if not self.is_alive:
-            is_alive_str = 'D'
+            is_alive_str = 'D'  # Dead
         return '{} ({})'.format(self._name, is_alive_str)
 
     def next_action(self, percept: Percept) -> Action:

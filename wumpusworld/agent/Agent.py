@@ -15,6 +15,7 @@ class Agent(Item):
 
     def __init__(self):
         super().__init__()
+        # By default, the agent start at (0,0) and facing East.
         self._location = Coords(0, 0)
         self._orientation = East()
         self._has_gold = False

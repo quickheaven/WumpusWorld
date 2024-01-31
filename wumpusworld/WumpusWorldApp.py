@@ -43,7 +43,7 @@ if __name__ == '__main__':
     player = NaiveAgent()
 
     # Create the Cave
-    index_display_start_on_zero: bool = True
+    index_display_start_on_zero: bool = True  # Set this False if we want to display the grid as [1][1].
     environment = Environment(4, 4, False, 0.2, index_display_start_on_zero)
 
     # Player enters the Cave
