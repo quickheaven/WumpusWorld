@@ -84,6 +84,7 @@ class AgentState:
                 self.turn_left()
             case 2:  # TURN RIGHT
                 self.turn_right()
+        return self
 
     def __str__(self):
         return ('location: {}, orientation: {}, has_gold: {}, has_arrow: {}, is_alive: {}'
