@@ -1,5 +1,5 @@
 from random import choice
-
+import matplotlib.pyplot as plt
 import networkx as nx
 from networkx import Graph
 from scipy.spatial import distance
@@ -33,7 +33,7 @@ class MovePlanningAgent(Agent):
         # Inspiration comes from Scala project branch beeline-agent
 
         if self._agent_state.has_gold:
-            print('The agent have the gold. Performing an escape plan.')
+            print('The agent have the gold. Performing the escape plan.')
             if self._agent_state.location == Coords(0, 0):  # we have a winner
                 action_int = 4  # Climb
 
@@ -79,13 +79,22 @@ class MovePlanningAgent(Agent):
 
             match action_int:
                 case 0:
-                    new_safe_location = self._agent_state.forward(self._grid_width, self._grid_height)
-
                     # --------------------------------------------------------------------------------------------------
                     #  Agent keeps track of safe locations (5pts)
                     # --------------------------------------------------------------------------------------------------
+
+                    agent_old_location = self._agent_state.location
+                    agent_old_orientation = self._agent_state.orientation
+
                     #  move may not actually be safe, but if not agent will be dead so doesn't matter
-                    self._safe_locations.add((new_safe_location, self._orientation))
+                    agent_new_safe_location = self._agent_state.forward(self._grid_width, self._grid_height)
+                    agent_new_orientation = self._agent_state.orientation
+
+                    is_loc_changed: bool = (agent_old_location.x != agent_new_safe_location.x
+                                            or agent_old_location.y != agent_new_safe_location.y)
+                    if is_loc_changed:
+                        self._safe_locations.add(
+                            (agent_new_safe_location, agent_old_location, agent_new_orientation, agent_old_orientation))
 
                 case 1:
                     self._agent_state.turn_left()
@@ -94,8 +103,10 @@ class MovePlanningAgent(Agent):
                 case 2:
                     self._agent_state.use_arrow = True
 
-        safe_locations = ['Coords: ({},{}) Orientation: {}'.format(coords.x, coords.y, orientation) for
-                          coords, orientation in self._safe_locations]
+        safe_locations = ['From Coords: ({},{}) To Coords: ({},{}) :: New Orientation: {}, Old Orientation: {}'
+                          .format(old_coords.x, old_coords.y, new_coords.x, new_coords.y, str(new_orientation),
+                                  str(old_orientation)) for
+                          new_coords, old_coords, new_orientation, old_orientation in self._safe_locations]
 
         print('MovePlanningAgent.next_action grid_width: {}, grid_height: {}, \nagent_state: {}, \nsafe_locations: {}, '
               .format(self._grid_width, self._grid_height, self._agent_state, safe_locations))
@@ -114,19 +125,14 @@ class MovePlanningAgent(Agent):
         nodes = []
         edges = []
 
-        old_x = 0
-        old_y = 0
-
-        for loc, orient in self._safe_locations:
+        for new_loc, old_loc, new_orient, old_orient in self._safe_locations:
             # Build the nodes
-            node = ((loc.x, loc.y), {'orientation': orient})
+            node = ((new_loc.x, new_loc.y), {'orientation': new_orient})
             nodes.append(node)
 
             # Build the edges : (from location, to location)
-            edge = ((old_x, old_y), (loc.x, loc.y))
+            edge = ((old_loc.x, old_loc.y), (new_loc.x, new_loc.y))
             edges.append(edge)
-            old_x = loc.x
-            old_y = loc.y
 
         print('nodes: {}'.format(nodes))
         print('edges: {}'.format(edges))
@@ -142,13 +148,41 @@ class MovePlanningAgent(Agent):
         print('Source Node: {}, Target Node: {}'.format(source_node, target_node))
 
         # https://datascienceparichay.com/article/manhattan-distance-python/
-        #  Option 1:
-        shortest_path = nx.astar_path(graph, source_node, target_node, heuristic=distance.cityblock)
-        #  Option 2:
+        #  Option 1: Use a custom function for manhattan distance.
         #  shortest_path = nx.astar_path(graph, source_node, target_node, heuristic=self.__get_manhattan_distance)
+
+        #  Option 2: Use scipy library.
+        shortest_path = nx.astar_path(graph, source_node, target_node, heuristic=distance.cityblock)
         print("The shortest path: {}".format(shortest_path))
 
-        escape_plan = [1, 2, 3, 1]  # TODO build the escape plan
+        """
+        nx.draw_networkx(graph,  # pos=pos,
+                         node_color="red", node_size=3000, with_labels=True,
+                         font_color="white", font_size="20", font_family="Times New Roman",
+                         font_weight="bold",
+                         width=5
+                         )
+        plt.margins(0.2)
+        plt.show()
+        """
+        """
+        Example: 
+        edges: [((2, 0), (2, 1)), ((0, 0), (1, 0)), ((2, 1), (3, 1)), ((1, 0), (2, 0))]
+        Source Node: (3, 1), Target Node: (0, 0)
+        The shortest path: [(3, 1), (2, 1), (2, 0), (1, 0), (0, 0)]
+        
+        safe_locations: ['From Coords: (2,0) To Coords: (2,1) :: New Orientation: East, Old Orientation: East', 
+        'From Coords: (0,0) To Coords: (1,0) :: New Orientation: North, Old Orientation: North', 
+        'From Coords: (2,1) To Coords: (3,1) :: New Orientation: North, Old Orientation: North', 
+        'From Coords: (1,0) To Coords: (2,0) :: New Orientation: North, Old Orientation: North'],
+        """
+        # TODO
+        # Loop the shortest_path
+        #   Find the relation between the nodes of shortest path.
+        #   Based on a given orientation, adjust how to turn-around. Include this on the plan.
+        #
+
+        escape_plan = []  # TODO build the escape plan
 
         return escape_plan
 
