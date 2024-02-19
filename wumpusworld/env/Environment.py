@@ -179,15 +179,20 @@ class Environment:
             case 5:  # SHOOT
                 had_arrow: bool = agent.has_arrow
 
-                wumpus_killed: bool = self.__kill_attempt_successful(agent)
-                agent.has_arrow = False
+                wumpus_killed: bool = False
+                if had_arrow:
+                    wumpus_killed = self.__kill_attempt_successful(agent)
+                    agent.has_arrow = False
 
                 if wumpus_killed:
-                    print('The Agent killed the Wumpus.')
+                    print('The Agent killed the Wumpus monster.')
                     # I was thinking if I should add a Scream to every Cell if the Wumpus is killed. But since the Scala
                     # version didn't do it, I decided not to add the Scream in all Cell.
                 else:
-                    print('The Agent failed to kill the Wumpus.')
+                    if had_arrow:
+                        print('The Agent failed to kill the Wumpus monster.')
+                    else:
+                        print('The Agent no longer have an arrow and cannot shoot.')
 
                 reward: float = -1
                 if had_arrow:
