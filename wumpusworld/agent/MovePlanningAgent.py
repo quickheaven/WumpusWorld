@@ -1,4 +1,6 @@
 from random import choice
+from typing import Type
+
 import matplotlib.pyplot as plt
 import networkx as nx
 from networkx import Graph
@@ -6,8 +8,13 @@ from scipy.spatial import distance
 
 from wumpusworld.agent.Agent import Agent
 from wumpusworld.agent.AgentState import AgentState
+from wumpusworld.agent.Orientation import Orientation
 from wumpusworld.agent.Percept import Percept
 from wumpusworld.agent.orientation.Coords import Coords
+from wumpusworld.agent.orientation.East import East
+from wumpusworld.agent.orientation.North import North
+from wumpusworld.agent.orientation.South import South
+from wumpusworld.agent.orientation.West import West
 from wumpusworld.enums.Action import Action
 
 
@@ -19,7 +26,8 @@ class MovePlanningAgent(Agent):
         self._grid_width = grid_width
         self._grid_height = grid_height
         self._agent_state = AgentState()
-        self._safe_locations = set()
+        self._safe_locations = set()  # Coords
+        self._safe_locations_complete = set()
         self._action_list = []
 
     def __str__(self):
@@ -34,83 +42,91 @@ class MovePlanningAgent(Agent):
 
         if self._agent_state.has_gold:
             print('The agent have the gold. Performing the escape plan.')
-            if self._agent_state.location == Coords(0, 0):  # we have a winner
+            # print('The agent location: ({},{}), orientation: {}'.format(self._agent_state.location.x,
+            #                                                            self._agent_state.location.y,
+            #                                                            self._agent_state.orientation.__str__()))
+
+            # if self._agent_state.location.x == 0 and self._agent_state.location.y == 0:  # we have a winner
+            if self.location.x == 0 and self.location.y == 0:  # we have a winner
                 action_int = 4  # Climb
-
+                print('The agent wins the game.')
             else:
-                # add action to the list.
-                indexes = [i for i in range(2)]  # Exclude Grab (3) Climb (4).
-                action_int = choice(indexes)
 
-                if len(self._action_list) == 0:
+                if len(self._action_list) == 0:  # Only create the escape action plan if it's not yet available.
 
                     # --------------------------------------------------------------------------------------------------
-                    # Agent creates and updates the escape plan  (5pts)
+                    # [Objective] Agent creates and updates the escape plan (5pts)
                     # --------------------------------------------------------------------------------------------------
                     print('Building the escape plan.')
-                    self._action_list = self.__create_shortest_path_escape_plan()
+                    self._action_list = self.__create_escape_plan()
+                    print('The initial escape plan {}.'.format(self._action_list))
+
+                    # Set the action based on the first action list from the escape plan.
+                    action_int = self._action_list[0]
+                    self._action_list.pop(0)
 
                 else:
 
                     # --------------------------------------------------------------------------------------------------
-                    # Agent follows the shortest path back to start after gold grab(5pts)
+                    # [Objective] Agent follows the shortest path back to start after gold grab (5pts)
                     # --------------------------------------------------------------------------------------------------
-                    print('Execute the action plan based on action_list.')
-
-                    grid_width: int = self._grid_width
-                    grid_height: int = self._grid_height
+                    print('Execute the action plan based on action_list {}.'.format(self._action_list))
 
                     #  Get the action from the action list (the first on the list)
                     action_int = self._action_list[0]
 
                     #  Apply the move action
-                    self._agent_state = self._agent_state.apply_move_action(Action.get_by_id(action_int), grid_width,
-                                                                            grid_height)
+                    self._agent_state = self._agent_state.apply_move_action(action_int,
+                                                                            self._grid_width,
+                                                                            self._grid_height)
+                    # print('The agent location after apply the state: {} {}'.format(self._agent_state.location,
+                    #                                                               self._agent_state.orientation))
+
                     #  Remove the action from the action list (the first on the list)
                     self._action_list.pop(0)
 
         elif percept.glitter():
             self._agent_state.has_gold = True
+            self.has_gold = True  # Needed because Environment is looking on Agent and not the agent state.
             action_int = 3  # Grab
 
         else:
-            indexes = [i for i in range(6) if i not in [3, 4]]  # Exclude Grab (3) Climb (4).
-            action_int = choice(indexes)
+            action_int = self.__search_for_gold()
 
-            match action_int:
-                case 0:
-                    # --------------------------------------------------------------------------------------------------
-                    #  Agent keeps track of safe locations (5pts)
-                    # --------------------------------------------------------------------------------------------------
+        return Action.get_by_id(action_int)
 
-                    agent_old_location = self._agent_state.location
-                    agent_old_orientation = self._agent_state.orientation
+    def __search_for_gold(self):
+        indexes = [i for i in range(6) if i not in [3, 4]]  # Exclude Grab (3) Climb (4).
+        action_int = choice(indexes)
 
-                    #  move may not actually be safe, but if not agent will be dead so doesn't matter
-                    agent_new_safe_location = self._agent_state.forward(self._grid_width, self._grid_height)
-                    agent_new_orientation = self._agent_state.orientation
+        match action_int:
+            case 0:
+                # --------------------------------------------------------------------------------------------------
+                # [Objective] Agent keeps track of safe locations (5pts)
+                # --------------------------------------------------------------------------------------------------
 
-                    is_loc_changed: bool = (agent_old_location.x != agent_new_safe_location.x
-                                            or agent_old_location.y != agent_new_safe_location.y)
-                    if is_loc_changed:
-                        self._safe_locations.add(
-                            (agent_new_safe_location, agent_old_location, agent_new_orientation, agent_old_orientation))
+                agent_old_safe_location = self._agent_state.location
 
-                case 1:
-                    self._agent_state.turn_left()
-                case 2:
-                    self._agent_state.turn_right()
-                case 2:
-                    self._agent_state.use_arrow = True
+                #  move may not actually be safe, but if not agent will be dead so doesn't matter
+                agent_new_safe_location = self._agent_state.forward(self._grid_width, self._grid_height)
 
-        safe_locations = ['From Coords: ({},{}) To Coords: ({},{}) :: New Orientation: {}, Old Orientation: {}'
-                          .format(old_coords.x, old_coords.y, new_coords.x, new_coords.y, str(new_orientation),
-                                  str(old_orientation)) for
-                          new_coords, old_coords, new_orientation, old_orientation in self._safe_locations]
+                self._safe_locations.add(agent_new_safe_location)
+                self._safe_locations_complete.add((agent_new_safe_location, agent_old_safe_location))
+
+            case 1:
+                self._agent_state.turn_left()
+            case 2:
+                self._agent_state.turn_right()
+            case 5:
+                self._agent_state.use_arrow = True
+
+        safe_locations = ['{}'
+                          .format(coord) for
+                          coord in self._safe_locations]
 
         print('MovePlanningAgent.next_action grid_width: {}, grid_height: {}, \nagent_state: {}, \nsafe_locations: {}, '
               .format(self._grid_width, self._grid_height, self._agent_state, safe_locations))
-        return Action.get_by_id(action_int)
+        return action_int
 
     def __get_manhattan_distance(self, a, b):
         (x1, y1) = a
@@ -118,16 +134,18 @@ class MovePlanningAgent(Agent):
         dist = ((x1 - x2) ** 2 + (y1 - y2) ** 2)
         return dist
 
-    def __create_shortest_path_escape_plan(self):
+    def __find_shortest_path(self):
         graph: Graph = nx.Graph()
         graph.graph["Graph_Name"] = "Escape Plan"
 
         nodes = []
         edges = []
 
-        for new_loc, old_loc, new_orient, old_orient in self._safe_locations:
+        # for new_loc, old_loc, new_orient in self._safe_locations:
+        for new_loc, old_loc in self._safe_locations_complete:
             # Build the nodes
-            node = ((new_loc.x, new_loc.y), {'orientation': new_orient})
+            # node = ((new_loc.x, new_loc.y), {'orientation': new_orient})
+            node = ((new_loc.x, new_loc.y), {})
             nodes.append(node)
 
             # Build the edges : (from location, to location)
@@ -141,7 +159,7 @@ class MovePlanningAgent(Agent):
         graph.add_edges_from(edges)
 
         # --------------------------------------------------------------------------------------------------
-        # Shortest path is created from the graph (5pts)
+        # [Objective] Shortest path is created from the graph (5pts)
         # --------------------------------------------------------------------------------------------------
         source_node = self._agent_state.location.get()
         target_node = Coords(0, 0).get()
@@ -165,26 +183,91 @@ class MovePlanningAgent(Agent):
         plt.margins(0.2)
         plt.show()
         """
-        """
-        Example: 
-        edges: [((2, 0), (2, 1)), ((0, 0), (1, 0)), ((2, 1), (3, 1)), ((1, 0), (2, 0))]
-        Source Node: (3, 1), Target Node: (0, 0)
-        The shortest path: [(3, 1), (2, 1), (2, 0), (1, 0), (0, 0)]
-        
-        safe_locations: ['From Coords: (2,0) To Coords: (2,1) :: New Orientation: East, Old Orientation: East', 
-        'From Coords: (0,0) To Coords: (1,0) :: New Orientation: North, Old Orientation: North', 
-        'From Coords: (2,1) To Coords: (3,1) :: New Orientation: North, Old Orientation: North', 
-        'From Coords: (1,0) To Coords: (2,0) :: New Orientation: North, Old Orientation: North'],
-        """
-        # TODO
-        # Loop the shortest_path
-        #   Find the relation between the nodes of shortest path.
-        #   Based on a given orientation, adjust how to turn-around. Include this on the plan.
-        #
+        list_shortest_path = []
+        for i, shortest_path in enumerate(shortest_path):
+            list_shortest_path.append(Coords(shortest_path[0], shortest_path[1]))
 
-        escape_plan = []  # TODO build the escape plan
+        return list_shortest_path
 
-        return escape_plan
+    def __create_escape_plan(self):
+
+        shortest_path = self.__find_shortest_path()
+
+        return self.__create_action_list_from_shortest_path(shortest_path)
+
+    def __create_action_list_from_shortest_path(self, nodes_remaining):
+        forward = Action.get_by_value("FORWARD")
+        action_list_escape_plan = []
+        agent_state_orientation = self._agent_state.orientation
+        agent_state_location = self._agent_state.location
+        # print('*** agent_state_orientation: {}'.format(agent_state_orientation))
+
+        while nodes_remaining:
+            # print('*** len(nodes_remaining) : {}'.format(len(nodes_remaining)))
+            # print('*** action_list_escape_plan: {}, {}'.format(action_list_escape_plan, nodes_remaining))
+            if len(nodes_remaining) == 1:
+                return action_list_escape_plan
+            else:
+
+                direction_to_go = self.__direction(agent_state_location, nodes_remaining[1])
+                # print('*** direction_to_go: {}: agent_state_orientation: {}'.format(str(direction_to_go),
+                #                                                                    str(agent_state_orientation)))
+                if str(direction_to_go) == str(agent_state_orientation):
+                    # print('*** Equal Orientation ****')
+                    action_list_escape_plan.append(forward)
+                    agent_state_location = nodes_remaining[1]
+                    nodes_remaining.pop(0)
+                else:
+                    action, new_orientation = self.__rotate(direction_to_go, agent_state_orientation)
+                    action_list_escape_plan.append(action)
+                    agent_state_orientation = new_orientation
+
+        return action_list_escape_plan
+
+    def __direction(self, fr_location: Coords, to_location: Coords) -> Orientation:
+        print('__direction fr_location: {}, to_location: {}'.format(fr_location, to_location))
+        if fr_location.x == to_location.x:
+            if fr_location.y < to_location.y:
+                return East()
+            else:
+                return West()
+        else:
+            if fr_location.x < to_location.x:
+                return North()
+            else:
+                return South()
+
+    def __rotate(self, node_orientation: Orientation,
+                 agent_orientation: Orientation) -> (int, Orientation):
+        print('__rotate: node_orientation: {}, agent_orientation: {}'.format(node_orientation, agent_orientation))
+        turn_left = Action.get_by_value("TURN_LEFT")
+        turn_right = Action.get_by_value("TURN_RIGHT")
+        if isinstance(node_orientation, North) and isinstance(agent_orientation, East):
+            return turn_left, North()
+        elif isinstance(node_orientation, South) and isinstance(agent_orientation, East):
+            return turn_right, South()
+        elif isinstance(node_orientation, West) and isinstance(agent_orientation, East):
+            return turn_right, South()
+        elif isinstance(node_orientation, North) and isinstance(agent_orientation, West):
+            return turn_right, North()
+        elif isinstance(node_orientation, South) and isinstance(agent_orientation, West):
+            return turn_left, South()
+        elif isinstance(node_orientation, East) and isinstance(agent_orientation, West):
+            return turn_right, North()
+        elif isinstance(node_orientation, South) and isinstance(agent_orientation, North):
+            return turn_right, East()
+        elif isinstance(node_orientation, East) and isinstance(agent_orientation, North):
+            return turn_right, East()
+        elif isinstance(node_orientation, West) and isinstance(agent_orientation, North):
+            return turn_left, West()
+        elif isinstance(node_orientation, North) and isinstance(agent_orientation, South):
+            return turn_right, West()
+        elif isinstance(node_orientation, East) and isinstance(agent_orientation, South):
+            return turn_left, East()
+        elif isinstance(node_orientation, West) and isinstance(agent_orientation, South):
+            return turn_right, West()
+        # else:
+        #    raise ValueError("The agent cannot determine how to rotate.")
 
     def to_string(self) -> str:
         parent_class_str = super().__str__()

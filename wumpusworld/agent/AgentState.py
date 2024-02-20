@@ -75,8 +75,7 @@ class AgentState:
     def use_arrow(self):
         self._has_arrow = False
 
-    def apply_move_action(self, action: Action, grid_width: int, grid_height: int):
-        action_id: int = Action.get_by_value(str(action))
+    def apply_move_action(self, action_id: int, grid_width: int, grid_height: int):
         match action_id:
             case 0:  # FORWARD
                 self.forward(grid_width, grid_height)

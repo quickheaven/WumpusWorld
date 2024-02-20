@@ -116,7 +116,7 @@ class Environment:
     def apply_action(self, action: Action):
 
         action_id = Action.get_by_value(str(action))
-        print('Action: {}'.format(action))
+        print('Environment apply_action: {}'.format(action))
 
         cell_of_agent, agent = self.get_cell_agent()
 
@@ -134,7 +134,10 @@ class Environment:
 
                 death = (new_cell_of_agent.has_wumpus and wumpus.is_alive) or new_cell_of_agent.has_pit
 
-                agent.has_gold = new_cell_of_agent.has_glitter
+                # Bug Fixed: Set only the has gold if not yet set.
+                if not agent.has_gold:
+                    agent.has_gold = new_cell_of_agent.has_glitter
+
                 agent.is_alive = not death
 
                 if not agent.is_alive:
