@@ -4,7 +4,6 @@ from wumpusworld.agent.orientation.East import East
 from wumpusworld.agent.orientation.North import North
 from wumpusworld.agent.orientation.South import South
 from wumpusworld.agent.orientation.West import West
-from wumpusworld.enums.Action import Action
 
 
 class AgentState:

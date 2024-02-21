@@ -26,15 +26,28 @@ class MovePlanningAgent(Agent):
         self._grid_width = grid_width
         self._grid_height = grid_height
         self._agent_state = AgentState()
-        self._safe_locations = set()  # Coords
-        self._safe_locations_complete = set()
+        self._safe_locations = set()
         self._action_list = []
 
     def __str__(self):
         is_alive_str: str = 'A'  # Alive
         if not self.is_alive:
             is_alive_str = 'D'  # Dead
-        return '{} ({})'.format(self._name, is_alive_str)
+
+        agent_state_orientation: str = ""
+        if isinstance(self._agent_state.orientation, North):
+            agent_state_orientation = "↑"
+
+        elif isinstance(self._agent_state.orientation, South):
+            agent_state_orientation = "↓"
+
+        elif isinstance(self._agent_state.orientation, West):
+            agent_state_orientation = "←"
+
+        elif isinstance(self._agent_state.orientation, East):
+            agent_state_orientation = "→"
+
+        return '{} ({}) ({})'.format(self._name, is_alive_str, agent_state_orientation)
 
     def next_action(self, percept: Percept) -> Action:
         action_int: int = -1
@@ -42,14 +55,10 @@ class MovePlanningAgent(Agent):
 
         if self._agent_state.has_gold:
             print('The agent have the gold. Performing the escape plan.')
-            # print('The agent location: ({},{}), orientation: {}'.format(self._agent_state.location.x,
-            #                                                            self._agent_state.location.y,
-            #                                                            self._agent_state.orientation.__str__()))
 
-            # if self._agent_state.location.x == 0 and self._agent_state.location.y == 0:  # we have a winner
-            if self.location.x == 0 and self.location.y == 0:  # we have a winner
+            if self._agent_state.location.x == 0 and self._agent_state.location.y == 0:  # we have a winner
                 action_int = 4  # Climb
-                print('The agent wins the game.')
+                print('**** The agent wins the game. ****')
             else:
 
                 if len(self._action_list) == 0:  # Only create the escape action plan if it's not yet available.
@@ -57,20 +66,25 @@ class MovePlanningAgent(Agent):
                     # --------------------------------------------------------------------------------------------------
                     # [Objective] Agent creates and updates the escape plan (5pts)
                     # --------------------------------------------------------------------------------------------------
-                    print('Building the escape plan.')
+                    print('Building the escape plan using networkx.')
                     self._action_list = self.__create_escape_plan()
-                    print('The initial escape plan {}.'.format(self._action_list))
+                    print('The action list of the escape plan {}.'.format(self._action_list))
 
                     # Set the action based on the first action list from the escape plan.
                     action_int = self._action_list[0]
                     self._action_list.pop(0)
+
+                    # Update the agent state.
+                    self._agent_state = self._agent_state.apply_move_action(action_int,
+                                                                            self._grid_width,
+                                                                            self._grid_height)
 
                 else:
 
                     # --------------------------------------------------------------------------------------------------
                     # [Objective] Agent follows the shortest path back to start after gold grab (5pts)
                     # --------------------------------------------------------------------------------------------------
-                    print('Execute the action plan based on action_list {}.'.format(self._action_list))
+                    print('Execute the escape plan based on action_list {}.'.format(self._action_list))
 
                     #  Get the action from the action list (the first on the list)
                     action_int = self._action_list[0]
@@ -110,8 +124,8 @@ class MovePlanningAgent(Agent):
                 #  move may not actually be safe, but if not agent will be dead so doesn't matter
                 agent_new_safe_location = self._agent_state.forward(self._grid_width, self._grid_height)
 
-                self._safe_locations.add(agent_new_safe_location)
-                self._safe_locations_complete.add((agent_new_safe_location, agent_old_safe_location))
+                self._safe_locations.add(
+                    (agent_new_safe_location, agent_old_safe_location, self._agent_state.orientation))
 
             case 1:
                 self._agent_state.turn_left()
@@ -120,12 +134,13 @@ class MovePlanningAgent(Agent):
             case 5:
                 self._agent_state.use_arrow = True
 
-        safe_locations = ['{}'
-                          .format(coord) for
-                          coord in self._safe_locations]
+        # Get the unique safe locations without the old location and previous orientation. This is only for logging.
+        safe_locations = set()
+        for new_safe_loc, old_safe_loc, orientation in self._safe_locations:
+            safe_locations.add(new_safe_loc.get())
 
-        print('MovePlanningAgent.next_action grid_width: {}, grid_height: {}, \nagent_state: {}, \nsafe_locations: {}, '
-              .format(self._grid_width, self._grid_height, self._agent_state, safe_locations))
+        print('MovePlanningAgent.next_action: \nagent_state: {}, \nsafe_locations: {}, '
+              .format(self._agent_state, safe_locations))
         return action_int
 
     def __get_manhattan_distance(self, a, b):
@@ -142,18 +157,17 @@ class MovePlanningAgent(Agent):
         edges = []
 
         # for new_loc, old_loc, new_orient in self._safe_locations:
-        for new_loc, old_loc in self._safe_locations_complete:
+        for new_loc, old_loc, new_orient in self._safe_locations:
             # Build the nodes
-            # node = ((new_loc.x, new_loc.y), {'orientation': new_orient})
-            node = ((new_loc.x, new_loc.y), {})
+            node = ((new_loc.x, new_loc.y), {'orientation': new_orient})
             nodes.append(node)
 
             # Build the edges : (from location, to location)
             edge = ((old_loc.x, old_loc.y), (new_loc.x, new_loc.y))
             edges.append(edge)
 
-        print('nodes: {}'.format(nodes))
-        print('edges: {}'.format(edges))
+        # print('nodes: {}'.format(nodes))
+        # print('edges: {}'.format(edges))
 
         graph.add_nodes_from(nodes)
         graph.add_edges_from(edges)
@@ -212,7 +226,8 @@ class MovePlanningAgent(Agent):
                 direction_to_go = self.__direction(agent_state_location, nodes_remaining[1])
                 # print('*** direction_to_go: {}: agent_state_orientation: {}'.format(str(direction_to_go),
                 #                                                                    str(agent_state_orientation)))
-                if str(direction_to_go) == str(agent_state_orientation):
+
+                if str(direction_to_go) == str(agent_state_orientation):  # is there a better way to do this in Python?
                     # print('*** Equal Orientation ****')
                     action_list_escape_plan.append(forward)
                     agent_state_location = nodes_remaining[1]
@@ -225,6 +240,7 @@ class MovePlanningAgent(Agent):
         return action_list_escape_plan
 
     def __direction(self, fr_location: Coords, to_location: Coords) -> Orientation:
+        # Based on scala project with my added adjustments.
         print('__direction fr_location: {}, to_location: {}'.format(fr_location, to_location))
         if fr_location.x == to_location.x:
             if fr_location.y < to_location.y:
@@ -239,6 +255,7 @@ class MovePlanningAgent(Agent):
 
     def __rotate(self, node_orientation: Orientation,
                  agent_orientation: Orientation) -> (int, Orientation):
+        # Based on scala project with my added adjustments.
         print('__rotate: node_orientation: {}, agent_orientation: {}'.format(node_orientation, agent_orientation))
         turn_left = Action.get_by_value("TURN_LEFT")
         turn_right = Action.get_by_value("TURN_RIGHT")
@@ -266,8 +283,8 @@ class MovePlanningAgent(Agent):
             return turn_left, East()
         elif isinstance(node_orientation, West) and isinstance(agent_orientation, South):
             return turn_right, West()
-        # else:
-        #    raise ValueError("The agent cannot determine how to rotate.")
+        else:
+            raise ValueError("The agent cannot determine how to rotate.")
 
     def to_string(self) -> str:
         parent_class_str = super().__str__()
