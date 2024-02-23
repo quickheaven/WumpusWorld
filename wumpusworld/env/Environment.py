@@ -116,7 +116,7 @@ class Environment:
     def apply_action(self, action: Action):
 
         action_id = Action.get_by_value(str(action))
-        print('Action: {}'.format(action))
+        print('Environment apply_action: {}'.format(action))
 
         cell_of_agent, agent = self.get_cell_agent()
 
@@ -134,7 +134,10 @@ class Environment:
 
                 death = (new_cell_of_agent.has_wumpus and wumpus.is_alive) or new_cell_of_agent.has_pit
 
-                agent.has_gold = new_cell_of_agent.has_glitter
+                # Bug Fixed: Set only the has gold if not yet set.
+                if not agent.has_gold:
+                    agent.has_gold = new_cell_of_agent.has_glitter
+
                 agent.is_alive = not death
 
                 if not agent.is_alive:
@@ -179,15 +182,20 @@ class Environment:
             case 5:  # SHOOT
                 had_arrow: bool = agent.has_arrow
 
-                wumpus_killed: bool = self.__kill_attempt_successful(agent)
-                agent.has_arrow = False
+                wumpus_killed: bool = False
+                if had_arrow:
+                    wumpus_killed = self.__kill_attempt_successful(agent)
+                    agent.has_arrow = False
 
                 if wumpus_killed:
-                    print('The Agent killed the Wumpus.')
+                    print('The Agent killed the Wumpus monster.')
                     # I was thinking if I should add a Scream to every Cell if the Wumpus is killed. But since the Scala
                     # version didn't do it, I decided not to add the Scream in all Cell.
                 else:
-                    print('The Agent failed to kill the Wumpus.')
+                    if had_arrow:
+                        print('The Agent failed to kill the Wumpus monster.')
+                    else:
+                        print('The Agent no longer have an arrow and cannot shoot.')
 
                 reward: float = -1
                 if had_arrow:

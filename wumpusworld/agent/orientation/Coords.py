@@ -14,3 +14,6 @@ class Coords:
     @property
     def y(self):
         return self._y
+
+    def get(self):
+        return self._x, self._y

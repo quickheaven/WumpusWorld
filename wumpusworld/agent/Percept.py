@@ -23,3 +23,6 @@ class Percept:
 
     def reward(self):
         return self._reward
+
+    def glitter(self):
+        return self._glitter
