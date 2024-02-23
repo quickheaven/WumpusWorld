@@ -66,3 +66,230 @@ PERCEPTION Stench: False, Breeze: False, Glitter: False, Bump: False, Scream: Fa
 
 Game Over.
 ```
+
+## Move Planning Agent
+This agent is capable of returning back safely after grabbing the gold.
+
+```
+MovePlanningAgent.next_action: 
+agent_state: location: (1,2), orientation: North, has_gold: False, has_arrow: False, is_alive: True, 
+safe_locations: {(0, 1), (0, 2), (1, 2), (0, 0)}, 
+Environment apply_action: FORWARD
+MOVE_PLANNING_AGENT Gold: True, Arrow: False, Alive: True, Coords: (1,2), Orientation: North
+PERCEPTION Stench: True, Breeze: False, Glitter: True, Bump: False, Scream: False, Is_Terminated: False, Reward: -1
++---------------+-----------------------+----------------------+---------------+
+| Cell [3][0]:  | Cell [3][1]:          | Cell [3][2]:         | Cell [3][3]:  |
+|               |                       |                      |               |
++---------------+-----------------------+----------------------+---------------+
+| Cell [2][0]:  | Cell [2][1]:          | Cell [2][2]:         | Cell [2][3]:  |
+|               | STENCH                |                      |               |
++---------------+-----------------------+----------------------+---------------+
+| Cell [1][0]:  | Cell [1][1]: WUMPUS   | Cell [1][2]: GOLD    | Cell [1][3]:  |
+| STENCH        | (A)                   | MOVE_PLANNING_AGENT  |               |
+|               |                       | (A) (↑)              |               |
+|               |                       | GLITTER STENCH       |               |
++---------------+-----------------------+----------------------+---------------+
+| Cell [0][0]:  | Cell [0][1]:          | Cell [0][2]:         | Cell [0][3]:  |
+|               | STENCH                |                      |               |
++---------------+-----------------------+----------------------+---------------+
+```
+
+```
+Environment apply_action: GRAB
+MOVE_PLANNING_AGENT Gold: True, Arrow: False, Alive: True, Coords: (1,2), Orientation: North
+PERCEPTION Stench: True, Breeze: False, Glitter: True, Bump: False, Scream: False, Is_Terminated: False, Reward: -1
++---------------+-----------------------+----------------------+---------------+
+| Cell [3][0]:  | Cell [3][1]:          | Cell [3][2]:         | Cell [3][3]:  |
+|               |                       |                      |               |
++---------------+-----------------------+----------------------+---------------+
+| Cell [2][0]:  | Cell [2][1]:          | Cell [2][2]:         | Cell [2][3]:  |
+|               | STENCH                |                      |               |
++---------------+-----------------------+----------------------+---------------+
+| Cell [1][0]:  | Cell [1][1]: WUMPUS   | Cell [1][2]: GOLD    | Cell [1][3]:  |
+| STENCH        | (A)                   | MOVE_PLANNING_AGENT  |               |
+|               |                       | (A) (↑)              |               |
+|               |                       | GLITTER STENCH       |               |
++---------------+-----------------------+----------------------+---------------+
+| Cell [0][0]:  | Cell [0][1]:          | Cell [0][2]:         | Cell [0][3]:  |
+|               | STENCH                |                      |               |
++---------------+-----------------------+----------------------+---------------+
+```
+
+```
+The agent have the gold. Performing the escape plan.
+Building the escape plan using networkx.
+Source Node: (1, 2), Target Node: (0, 0)
+The shortest path: [(1, 2), (0, 2), (0, 1), (0, 0)]
+__direction fr_location: (1,2), to_location: (0,2)
+__rotate: node_orientation: South, agent_orientation: North
+__direction fr_location: (1,2), to_location: (0,2)
+__rotate: node_orientation: South, agent_orientation: East
+__direction fr_location: (1,2), to_location: (0,2)
+__direction fr_location: (0,2), to_location: (0,1)
+__rotate: node_orientation: West, agent_orientation: South
+__direction fr_location: (0,2), to_location: (0,1)
+__direction fr_location: (0,1), to_location: (0,0)
+The action list of the escape plan [2, 2, 0, 2, 0, 0].
+Environment apply_action: TURN_RIGHT
+MOVE_PLANNING_AGENT Gold: True, Arrow: False, Alive: True, Coords: (1,2), Orientation: East
+PERCEPTION Stench: True, Breeze: False, Glitter: True, Bump: False, Scream: False, Is_Terminated: False, Reward: -1
++---------------+-----------------------+----------------------+---------------+
+| Cell [3][0]:  | Cell [3][1]:          | Cell [3][2]:         | Cell [3][3]:  |
+|               |                       |                      |               |
++---------------+-----------------------+----------------------+---------------+
+| Cell [2][0]:  | Cell [2][1]:          | Cell [2][2]:         | Cell [2][3]:  |
+|               | STENCH                |                      |               |
++---------------+-----------------------+----------------------+---------------+
+| Cell [1][0]:  | Cell [1][1]: WUMPUS   | Cell [1][2]: GOLD    | Cell [1][3]:  |
+| STENCH        | (A)                   | MOVE_PLANNING_AGENT  |               |
+|               |                       | (A) (→)              |               |
+|               |                       | GLITTER STENCH       |               |
++---------------+-----------------------+----------------------+---------------+
+| Cell [0][0]:  | Cell [0][1]:          | Cell [0][2]:         | Cell [0][3]:  |
+|               | STENCH                |                      |               |
++---------------+-----------------------+----------------------+---------------+
+```
+
+```
+The agent have the gold. Performing the escape plan.
+Execute the escape plan based on action_list [2, 0, 2, 0, 0].
+Environment apply_action: TURN_RIGHT
+MOVE_PLANNING_AGENT Gold: True, Arrow: False, Alive: True, Coords: (1,2), Orientation: South
+PERCEPTION Stench: True, Breeze: False, Glitter: True, Bump: False, Scream: False, Is_Terminated: False, Reward: -1
++---------------+-----------------------+----------------------+---------------+
+| Cell [3][0]:  | Cell [3][1]:          | Cell [3][2]:         | Cell [3][3]:  |
+|               |                       |                      |               |
++---------------+-----------------------+----------------------+---------------+
+| Cell [2][0]:  | Cell [2][1]:          | Cell [2][2]:         | Cell [2][3]:  |
+|               | STENCH                |                      |               |
++---------------+-----------------------+----------------------+---------------+
+| Cell [1][0]:  | Cell [1][1]: WUMPUS   | Cell [1][2]: GOLD    | Cell [1][3]:  |
+| STENCH        | (A)                   | MOVE_PLANNING_AGENT  |               |
+|               |                       | (A) (↓)              |               |
+|               |                       | GLITTER STENCH       |               |
++---------------+-----------------------+----------------------+---------------+
+| Cell [0][0]:  | Cell [0][1]:          | Cell [0][2]:         | Cell [0][3]:  |
+|               | STENCH                |                      |               |
++---------------+-----------------------+----------------------+---------------+
+```
+
+```
+The agent have the gold. Performing the escape plan.
+Execute the escape plan based on action_list [0, 2, 0, 0].
+Environment apply_action: FORWARD
+MOVE_PLANNING_AGENT Gold: True, Arrow: False, Alive: True, Coords: (0,2), Orientation: South
+PERCEPTION Stench: False, Breeze: False, Glitter: False, Bump: False, Scream: False, Is_Terminated: False, Reward: -1
++---------------+-----------------------+----------------------+---------------+
+| Cell [3][0]:  | Cell [3][1]:          | Cell [3][2]:         | Cell [3][3]:  |
+|               |                       |                      |               |
++---------------+-----------------------+----------------------+---------------+
+| Cell [2][0]:  | Cell [2][1]:          | Cell [2][2]:         | Cell [2][3]:  |
+|               | STENCH                |                      |               |
++---------------+-----------------------+----------------------+---------------+
+| Cell [1][0]:  | Cell [1][1]: WUMPUS   | Cell [1][2]: GOLD    | Cell [1][3]:  |
+| STENCH        | (A)                   | GLITTER STENCH       |               |
+|               |                       |                      |               |
++---------------+-----------------------+----------------------+---------------+
+| Cell [0][0]:  | Cell [0][1]:          | Cell [0][2]:         | Cell [0][3]:  |
+|               | STENCH                | MOVE_PLANNING_AGENT  |               |
+|               |                       | (A) (↓)              |               |
+|               |                       |                      |               |
++---------------+-----------------------+----------------------+---------------+
+```
+
+```
+The agent have the gold. Performing the escape plan.
+Execute the escape plan based on action_list [2, 0, 0].
+Environment apply_action: TURN_RIGHT
+MOVE_PLANNING_AGENT Gold: True, Arrow: False, Alive: True, Coords: (0,2), Orientation: West
+PERCEPTION Stench: False, Breeze: False, Glitter: False, Bump: False, Scream: False, Is_Terminated: False, Reward: -1
++---------------+-----------------------+----------------------+---------------+
+| Cell [3][0]:  | Cell [3][1]:          | Cell [3][2]:         | Cell [3][3]:  |
+|               |                       |                      |               |
++---------------+-----------------------+----------------------+---------------+
+| Cell [2][0]:  | Cell [2][1]:          | Cell [2][2]:         | Cell [2][3]:  |
+|               | STENCH                |                      |               |
++---------------+-----------------------+----------------------+---------------+
+| Cell [1][0]:  | Cell [1][1]: WUMPUS   | Cell [1][2]: GOLD    | Cell [1][3]:  |
+| STENCH        | (A)                   | GLITTER STENCH       |               |
+|               |                       |                      |               |
++---------------+-----------------------+----------------------+---------------+
+| Cell [0][0]:  | Cell [0][1]:          | Cell [0][2]:         | Cell [0][3]:  |
+|               | STENCH                | MOVE_PLANNING_AGENT  |               |
+|               |                       | (A) (←)              |               |
+|               |                       |                      |               |
++---------------+-----------------------+----------------------+---------------+
+```
+
+```
+The agent have the gold. Performing the escape plan.
+Execute the escape plan based on action_list [0, 0].
+Environment apply_action: FORWARD
+MOVE_PLANNING_AGENT Gold: True, Arrow: False, Alive: True, Coords: (0,1), Orientation: West
+PERCEPTION Stench: True, Breeze: False, Glitter: False, Bump: False, Scream: False, Is_Terminated: False, Reward: -1
++---------------+--------------------------+-------------------+---------------+
+| Cell [3][0]:  | Cell [3][1]:             | Cell [3][2]:      | Cell [3][3]:  |
+|               |                          |                   |               |
++---------------+--------------------------+-------------------+---------------+
+| Cell [2][0]:  | Cell [2][1]:             | Cell [2][2]:      | Cell [2][3]:  |
+|               | STENCH                   |                   |               |
++---------------+--------------------------+-------------------+---------------+
+| Cell [1][0]:  | Cell [1][1]: WUMPUS (A)  | Cell [1][2]: GOLD | Cell [1][3]:  |
+| STENCH        |                          | GLITTER STENCH    |               |
++---------------+--------------------------+-------------------+---------------+
+| Cell [0][0]:  | Cell [0][1]:             | Cell [0][2]:      | Cell [0][3]:  |
+|               | MOVE_PLANNING_AGENT (A)  |                   |               |
+|               | (←)                      |                   |               |
+|               | STENCH                   |                   |               |
++---------------+--------------------------+-------------------+---------------+
+```
+
+```
+The agent have the gold. Performing the escape plan.
+Execute the escape plan based on action_list [0].
+Environment apply_action: FORWARD
+MOVE_PLANNING_AGENT Gold: True, Arrow: False, Alive: True, Coords: (0,0), Orientation: West
+PERCEPTION Stench: False, Breeze: False, Glitter: False, Bump: False, Scream: False, Is_Terminated: False, Reward: -1
++---------------------+--------------------+-------------------+---------------+
+| Cell [3][0]:        | Cell [3][1]:       | Cell [3][2]:      | Cell [3][3]:  |
+|                     |                    |                   |               |
++---------------------+--------------------+-------------------+---------------+
+| Cell [2][0]:        | Cell [2][1]:       | Cell [2][2]:      | Cell [2][3]:  |
+|                     | STENCH             |                   |               |
++---------------------+--------------------+-------------------+---------------+
+| Cell [1][0]:        | Cell [1][1]:       | Cell [1][2]: GOLD | Cell [1][3]:  |
+| STENCH              | WUMPUS (A)         | GLITTER STENCH    |               |
+|                     |                    |                   |               |
++---------------------+--------------------+-------------------+---------------+
+| Cell [0][0]:        | Cell [0][1]:       | Cell [0][2]:      | Cell [0][3]:  |
+| MOVE_PLANNING_AGENT | STENCH             |                   |               |
+| (A) (←)             |                    |                   |               |
+|                     |                    |                   |               |
++---------------------+--------------------+-------------------+---------------+
+```
+
+```
+The agent have the gold. Performing the escape plan.
+**** The agent wins the game. ****
+Environment apply_action: CLIMB
+MOVE_PLANNING_AGENT Gold: True, Arrow: False, Alive: True, Coords: (0,0), Orientation: West
+PERCEPTION Stench: False, Breeze: False, Glitter: False, Bump: False, Scream: False, Is_Terminated: True, Reward: 999
++---------------------+--------------------+-------------------+---------------+
+| Cell [3][0]:        | Cell [3][1]:       | Cell [3][2]:      | Cell [3][3]:  |
+|                     |                    |                   |               |
++---------------------+--------------------+-------------------+---------------+
+| Cell [2][0]:        | Cell [2][1]:       | Cell [2][2]:      | Cell [2][3]:  |
+|                     | STENCH             |                   |               |
++---------------------+--------------------+-------------------+---------------+
+| Cell [1][0]:        | Cell [1][1]:       | Cell [1][2]: GOLD | Cell [1][3]:  |
+| STENCH              | WUMPUS (A)         | GLITTER STENCH    |               |
+|                     |                    |                   |               |
++---------------------+--------------------+-------------------+---------------+
+| Cell [0][0]:        | Cell [0][1]:       | Cell [0][2]:      | Cell [0][3]:  |
+| MOVE_PLANNING_AGENT | STENCH             |                   |               |
+| (A) (←)             |                    |                   |               |
+|                     |                    |                   |               |
++---------------------+--------------------+-------------------+---------------+
+
+Game Over.
+```
