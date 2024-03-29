@@ -26,3 +26,9 @@ class Percept:
 
     def glitter(self):
         return self._glitter
+
+    def breeze(self):
+        return self._breeze
+
+    def stench(self):
+        return self._stench

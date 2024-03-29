@@ -28,6 +28,11 @@ class ProbAgent(Agent):
         self._agent_state = AgentState()
         self._safe_locations = set()
         self._action_list = []
+        # -------------------------------------------------------------
+        self._visited_locations = set()
+        self._breeze_locations = set()
+        self._stench_locations = set()
+        # -------------------------------------------------------------
 
     def __str__(self):
         is_alive_str: str = 'A'  # Alive
@@ -51,7 +56,26 @@ class ProbAgent(Agent):
 
     def next_action(self, percept: Percept) -> Action:
         action_int: int = -1
-        # Inspiration comes from Scala project branch beeline-agent
+
+        # -------------------------------------------------------------
+        # visiting_new_location
+        is_visiting_new_location: bool = True
+        for loc in self._visited_locations:
+            if self._agent_state.location == loc:
+                is_visiting_new_location = False
+                break
+
+        if not is_visiting_new_location:
+            self._visited_locations.add(self._agent_state.location)
+
+        # new_breeze_locations
+        if percept.breeze():
+            self._breeze_locations.add(self._agent_state.location)
+
+        # new_stench_locations
+        if percept.stench():
+            self._stench_locations.add(self._agent_state.location)
+        # -------------------------------------------------------------
 
         if self._agent_state.has_gold:
             print('The agent have the gold. Performing the escape plan.')
@@ -64,7 +88,7 @@ class ProbAgent(Agent):
                 if len(self._action_list) == 0:  # Only create the escape action plan if it's not yet available.
 
                     # --------------------------------------------------------------------------------------------------
-                    # [Objective] Agent creates and updates the escape plan (5pts)
+                    # Agent creates and updates the escape plan
                     # --------------------------------------------------------------------------------------------------
                     print('Building the escape plan using networkx.')
                     self._action_list = self.__create_escape_plan()
@@ -82,7 +106,7 @@ class ProbAgent(Agent):
                 else:
 
                     # --------------------------------------------------------------------------------------------------
-                    # [Objective] Agent follows the shortest path back to start after gold grab (5pts)
+                    # Agent follows the shortest path back to start after gold grab
                     # --------------------------------------------------------------------------------------------------
                     print('Execute the escape plan based on action_list {}.'.format(self._action_list))
 
@@ -105,18 +129,23 @@ class ProbAgent(Agent):
             action_int = 3  # Grab
 
         else:
-            action_int = self.__search_for_gold()
+            # def safeLocations(tolerance: Double): Set[Coords] = {
+            #       allLocations.flatMap(row => row.filter(location => newInferredPitProbs(location.x)(location.y) < tolerance && newInferredWumpusProbs(location.x)(location.y) < tolerance)).toSet ++ visitedLocations
+            # }
+            # action_int = self.__search_for_gold(percept,safeLocations(0.40))
+
+            action_int = self.__search_for_gold(percept, 0.40)
 
         return Action.get_by_id(action_int)
 
-    def __search_for_gold(self):
+    def __search_for_gold(self, percept: Percept, tolerance: float):
         indexes = [i for i in range(6) if i not in [3, 4]]  # Exclude Grab (3) Climb (4).
         action_int = choice(indexes)
 
         match action_int:
             case 0:
                 # --------------------------------------------------------------------------------------------------
-                # [Objective] Agent keeps track of safe locations (5pts)
+                # Agent keeps track of safe locations
                 # --------------------------------------------------------------------------------------------------
 
                 agent_old_safe_location = self._agent_state.location
@@ -132,7 +161,10 @@ class ProbAgent(Agent):
             case 2:
                 self._agent_state.turn_right()
             case 5:
-                self._agent_state.use_arrow = True
+                if percept.stench():
+                    self._agent_state.use_arrow = True
+                else:
+                    self._agent_state.use_arrow = False
 
         # Get the unique safe locations without the old location and previous orientation. This is only for logging.
         safe_locations = set()
@@ -173,7 +205,7 @@ class ProbAgent(Agent):
         graph.add_edges_from(edges)
 
         # --------------------------------------------------------------------------------------------------
-        # [Objective] Shortest path is created from the graph (5pts)
+        # Shortest path is created from the graph
         # --------------------------------------------------------------------------------------------------
         source_node = self._agent_state.location.get()
         target_node = Coords(0, 0).get()
