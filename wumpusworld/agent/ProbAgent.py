@@ -1,21 +1,24 @@
 from random import choice
-from typing import Type
 
-import matplotlib.pyplot as plt
 import networkx as nx
+import torch
 from networkx import Graph
+from pomegranate.bayesian_network import BayesianNetwork
+from pomegranate.distributions import ConditionalCategorical
 from scipy.spatial import distance
 
 from wumpusworld.agent.Agent import Agent
 from wumpusworld.agent.AgentState import AgentState
 from wumpusworld.agent.Orientation import Orientation
 from wumpusworld.agent.Percept import Percept
+from wumpusworld.agent.Predicate import Predicate
 from wumpusworld.agent.orientation.Coords import Coords
 from wumpusworld.agent.orientation.East import East
 from wumpusworld.agent.orientation.North import North
 from wumpusworld.agent.orientation.South import South
 from wumpusworld.agent.orientation.West import West
 from wumpusworld.enums.Action import Action
+from wumpusworld.env.dto.Cell import Cell
 
 
 class ProbAgent(Agent):
@@ -28,10 +31,17 @@ class ProbAgent(Agent):
         self._agent_state = AgentState()
         self._safe_locations = set()
         self._action_list = []
-        # -------------------------------------------------------------
+        # --------------------------------------------------------------------------------------------------
+        # [Assignment 3]
+        # --------------------------------------------------------------------------------------------------
         self._visited_locations = set()
         self._breeze_locations = set()
         self._stench_locations = set()
+        self._heard_scream = False
+
+        self._matrix = [[Cell(x, y, False) for y in range(self._grid_height)] for x in
+                        range(self._grid_width)]
+
         # -------------------------------------------------------------
 
     def __str__(self):
@@ -57,11 +67,12 @@ class ProbAgent(Agent):
     def next_action(self, percept: Percept) -> Action:
         action_int: int = -1
 
-        # -------------------------------------------------------------
-        # visiting_new_location
+        # --------------------------------------------------------------------------------------------------
+        # [Assignment 3]
+        # --------------------------------------------------------------------------------------------------
         is_visiting_new_location: bool = True
         for loc in self._visited_locations:
-            if self._agent_state.location == loc:
+            if self._agent_state.location.x == loc.x and self._agent_state.location.y == loc.y:
                 is_visiting_new_location = False
                 break
 
@@ -75,7 +86,9 @@ class ProbAgent(Agent):
         # new_stench_locations
         if percept.stench():
             self._stench_locations.add(self._agent_state.location)
-        # -------------------------------------------------------------
+
+        self._heard_scream = self._heard_scream or percept.scream()
+        # --------------------------------------------------------------------------------------------------
 
         if self._agent_state.has_gold:
             print('The agent have the gold. Performing the escape plan.')
@@ -128,18 +141,138 @@ class ProbAgent(Agent):
             self.has_gold = True  # Needed because Environment is looking on Agent and not the agent state.
             action_int = 3  # Grab
 
+        elif percept.stench():  # Move this from inside __search_for_gold into here.
+            if self._agent_state.has_arrow:
+                self._agent_state.use_arrow = True
+            else:
+                self._agent_state.use_arrow = False
+            action_int = 5  # Shoot
         else:
-            # def safeLocations(tolerance: Double): Set[Coords] = {
-            #       allLocations.flatMap(row => row.filter(location => newInferredPitProbs(location.x)(location.y) < tolerance && newInferredWumpusProbs(location.x)(location.y) < tolerance)).toSet ++ visitedLocations
-            # }
-            # action_int = self.__search_for_gold(percept,safeLocations(0.40))
 
+            # --------------------------------------------------------------------------------------------------
+            # [Assignment 3]
+            # --------------------------------------------------------------------------------------------------
+            if is_visiting_new_location:
+
+                adjacent_cells = self.__find_adjacent_cells(
+                    Cell(self._agent_state.location.x, self._agent_state.location.y))
+                num_of_adjacent_cells = len(adjacent_cells)
+                print(
+                    f"[{self._agent_state.location.x}][{self._agent_state.location.y}] The number of adjacent cells {num_of_adjacent_cells}")
+
+                if num_of_adjacent_cells == 2:
+                    loc01 = Predicate(0.2).toCategorical()
+                    loc02 = Predicate(0.2).toCategorical()
+
+                    breeze = ConditionalCategorical([[
+                        [[1.0, 0.0], [0.0, 1.0]],
+                        [[0.0, 1.0], [0.0, 1.0]]
+                    ]])
+
+                    variables = [loc01, loc02, breeze]
+                    edges = [(loc01, breeze), (loc02, breeze)]
+
+                    pits_model = BayesianNetwork(variables, edges)
+
+                    X = torch.tensor([[-1, -1, 0],  # pit12?, pit21?, breeze is false
+                                      [-1, -1, 1],  # pit12?, pit21?, breeze is true
+                                      [-1, -1, -1],  # pit12?, pit21?, breeze?
+                                      [1, -1, -1]  # pit12 is true, pit21?, breeze?
+                                      ])
+
+                    X_masked = torch.masked.MaskedTensor(X, mask=X >= 0)
+
+                    predicted_pits_proba = pits_model.predict_proba(X_masked)
+
+                    print(f"TWO parents: {predicted_pits_proba}")
+
+                if num_of_adjacent_cells == 3:
+                    loc01 = Predicate(0.2).toCategorical()
+                    loc02 = Predicate(0.2).toCategorical()
+                    loc03 = Predicate(0.2).toCategorical()
+
+                    breeze = ConditionalCategorical([[
+                        [
+                            [[1.0, 0.0], [0.0, 1.0]],
+                            [[0.0, 1.0], [0.0, 1.0]]
+                        ],
+                        [
+                            [[1.0, 0.0], [0.0, 1.0]],
+                            [[0.0, 1.0], [0.0, 1.0]]
+                        ]
+                    ]])
+
+                    variables = [loc01, loc02, loc03, breeze]
+                    edges = [(loc01, breeze), (loc02, breeze), (loc03, breeze)]
+
+                    pits_model = BayesianNetwork(variables, edges)
+
+                    X = torch.tensor([[-1, -1, -1, 0],
+                                      [-1, -1, -1, 1],
+                                      [-1, -1, -1, -1],
+                                      [1, -1, -1, -1],
+                                      [0, -1, -1, -1]
+                                      ])
+
+                    X_masked = torch.masked.MaskedTensor(X, mask=X >= 0)
+                    print(X_masked)
+
+                    predicted_pits_proba = pits_model.predict_proba(X_masked)
+                    print(f"THREE parents: {predicted_pits_proba}")
+
+                if num_of_adjacent_cells == 4:
+                    loc01 = Predicate(0.2).toCategorical()
+                    loc02 = Predicate(0.2).toCategorical()
+                    loc03 = Predicate(0.2).toCategorical()
+                    loc04 = Predicate(0.2).toCategorical()
+
+                    breeze = ConditionalCategorical([[
+                        [
+                            [
+                                [[1.0, 0.0], [0.0, 1.0]],
+                                [[0.0, 1.0], [0.0, 1.0]]
+                            ],
+                            [
+                                [[1.0, 0.0], [0.0, 1.0]],
+                                [[0.0, 1.0], [0.0, 1.0]]
+                            ]
+                        ],
+                        [
+                            [
+                                [[1.0, 0.0], [0.0, 1.0]],
+                                [[0.0, 1.0], [0.0, 1.0]]
+                            ],
+                            [
+                                [[1.0, 0.0], [0.0, 1.0]],
+                                [[0.0, 1.0], [0.0, 1.0]]
+                            ]
+                        ]
+                    ]])
+
+                    variables = [loc01, loc02, loc03, loc04, breeze]
+                    edges = [(loc01, breeze), (loc02, breeze), (loc03, breeze), (loc04, breeze)]
+
+                    pits_model = BayesianNetwork(variables, edges)
+
+                    X = torch.tensor([[-1, -1, -1, -1, 0],
+                                      [-1, -1, -1, -1, 1],
+                                      [-1, -1, -1, -1, -1],
+                                      [1, -1, -1, -1, -1]
+                                      ])
+
+                    X_masked = torch.masked.MaskedTensor(X, mask=X >= 0)
+                    print(X_masked)
+
+                    predicted_pits_proba = pits_model.predict_proba(X_masked)
+                    print(f"FOUR parents: {predicted_pits_proba}")
+
+            # --------------------------------------------------------------------------------------------------
             action_int = self.__search_for_gold(percept, 0.40)
 
         return Action.get_by_id(action_int)
 
     def __search_for_gold(self, percept: Percept, tolerance: float):
-        indexes = [i for i in range(6) if i not in [3, 4]]  # Exclude Grab (3) Climb (4).
+        indexes = [i for i in range(6) if i not in [3, 4, 5]]  # Exclude Grab (3) Climb (4) Shoot (5).
         action_int = choice(indexes)
 
         match action_int:
@@ -160,11 +293,6 @@ class ProbAgent(Agent):
                 self._agent_state.turn_left()
             case 2:
                 self._agent_state.turn_right()
-            case 5:
-                if percept.stench():
-                    self._agent_state.use_arrow = True
-                else:
-                    self._agent_state.use_arrow = False
 
         # Get the unique safe locations without the old location and previous orientation. This is only for logging.
         safe_locations = set()
@@ -321,3 +449,14 @@ class ProbAgent(Agent):
     def to_string(self) -> str:
         parent_class_str = super().__str__()
         return '{} {}'.format(self._name, parent_class_str)
+
+    def __find_adjacent_cells(self, cell: Cell):
+        x = cell.x
+        y = cell.y
+        adjacent_cells = []
+        for i in range(x - 1, x + 2):
+            for j in range(y - 1, y + 2):
+                if 0 <= i < self._grid_width and 0 <= j < self._grid_height and (i, j) != (x, y) and abs(i - x) + abs(
+                        j - y) == 1:
+                    adjacent_cells.append(self._matrix[i][j])
+        return adjacent_cells

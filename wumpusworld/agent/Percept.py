@@ -9,13 +9,13 @@ class Percept:
         self._breeze = breeze
         self._glitter = glitter
         self._bump = bump
-        self._screem = scream
+        self._scream = scream
         self._is_terminated = is_terminated
         self._reward = reward
 
     def __str__(self):
         return ('PERCEPTION Stench: {}, Breeze: {}, Glitter: {}, Bump: {}, Scream: {}, Is_Terminated: {}, Reward: {}'
-                .format(self._stench, self._breeze, self._glitter, self._bump, self._screem, self._is_terminated,
+                .format(self._stench, self._breeze, self._glitter, self._bump, self._scream, self._is_terminated,
                         self._reward))
 
     def is_terminated(self):
@@ -32,3 +32,6 @@ class Percept:
 
     def stench(self):
         return self._stench
+
+    def scream(self):
+        return self._scream
