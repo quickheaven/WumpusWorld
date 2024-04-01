@@ -5,7 +5,7 @@ from wumpusworld.env.Environment import Environment
 
 
 def run_episode(env: Environment, agent: Agent, env_percept: Percept):
-    if env_percept.is_terminated():
+    if env_percept.is_terminated:
         print("Game Over.")
     else:
         # Get the next action of the Player

@@ -83,14 +83,14 @@ class ProbAgent(Agent):
             self._visited_locations.add(self._agent_state.location)
 
         # new_breeze_locations
-        if percept.breeze():
+        if percept.breeze:
             self._breeze_locations.add(self._agent_state.location)
 
         # new_stench_locations
-        if percept.stench():
+        if percept.stench:
             self._stench_locations.add(self._agent_state.location)
 
-        self._heard_scream = self._heard_scream or percept.scream()
+        self._heard_scream = self._heard_scream or percept.scream
         # --------------------------------------------------------------------------------------------------
 
         if self._agent_state.has_gold:
@@ -139,12 +139,12 @@ class ProbAgent(Agent):
                     #  Remove the action from the action list (the first on the list)
                     self._action_list.pop(0)
 
-        elif percept.glitter() and not self._agent_state.has_gold:
+        elif percept.glitter and not self._agent_state.has_gold:
             self._agent_state.has_gold = True
             self.has_gold = True  # Needed because Environment is looking on Agent and not the agent state.
             action_int = 3  # Grab
 
-        elif percept.stench() and self._agent_state.has_arrow:
+        elif percept.stench and self._agent_state.has_arrow:
             self._agent_state.use_arrow = True
 
         else:
@@ -178,7 +178,7 @@ class ProbAgent(Agent):
 
         forward_location = self._agent_state.forward(self._grid_width, self._grid_height, False)
 
-        if percept.bump() or (
+        if percept.bump or (
                 forward_location.x == self._agent_state.location.x and forward_location.y == self._agent_state.location.y):
             action_int = 2  # Turn Right (Copied from Scala)
         else:
@@ -418,7 +418,7 @@ class ProbAgent(Agent):
         pits_model = None
 
         is_breeze = 0
-        if percept.breeze():
+        if percept.breeze:
             is_breeze = 1
 
         if num_of_adjacent_cells == 2:
@@ -574,7 +574,7 @@ class ProbAgent(Agent):
         wums_model = None
 
         is_stench = 0
-        if percept.stench():
+        if percept.stench:
             is_stench = 1
 
         if num_of_adjacent_cells == 2:

@@ -99,7 +99,7 @@ class MovePlanningAgent(Agent):
                     #  Remove the action from the action list (the first on the list)
                     self._action_list.pop(0)
 
-        elif percept.glitter():
+        elif percept.glitter:
             self._agent_state.has_gold = True
             self.has_gold = True  # Needed because Environment is looking on Agent and not the agent state.
             action_int = 3  # Grab

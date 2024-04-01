@@ -23,7 +23,7 @@ B.  The Wumpus World also HAS-A Agent (Player) that will explore the Environment
 
 
 def run_episode(env: Environment, agent: Agent, env_percept: Percept):
-    if env_percept.is_terminated():
+    if env_percept.is_terminated:
         print("Game Over.")
     else:
         # Get the next action of the Player
