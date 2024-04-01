@@ -29,7 +29,7 @@ class ProbAgent(Agent):
         self._grid_width = grid_width
         self._grid_height = grid_height
         self._agent_state = AgentState()
-        self._safe_locations = set()
+        self._safe_locations = set()  # This is the original safe location from MovePlanningAgent.
         self._action_list = []
         # --------------------------------------------------------------------------------------------------
         # [Assignment 3]
@@ -41,6 +41,7 @@ class ProbAgent(Agent):
 
         self._inferred_pit_prob: float = 0.0
         self._inferred_wum_prob: float = 0.0
+        self._safe_locations_based_on_prob = set()
 
         self._matrix = [[Cell(x, y, False) for y in range(self._grid_height)] for x in
                         range(self._grid_width)]
@@ -151,12 +152,12 @@ class ProbAgent(Agent):
             # --------------------------------------------------------------------------------------------------
             # [Assignment 3]
             # --------------------------------------------------------------------------------------------------
-            # ask one question each time the agent is considering moving to a location in the grid it has never been
+            tolerance: float = 0.40
             if is_visiting_new_location:
                 self._inferred_pit_prob = self.__get_cell_probability_having_pit(percept)
                 self._inferred_wum_prob = self.__get_cell_probability_having_wumpus(percept)
 
-            action_int = self.__search_for_gold(percept, 0.40)
+            action_int = self.__search_for_gold(percept, tolerance)
             # --------------------------------------------------------------------------------------------------
 
         return Action.get_by_id(action_int)
@@ -165,31 +166,19 @@ class ProbAgent(Agent):
         print(f"__search_for_gold : self._inferred_pit_prob: {self._inferred_pit_prob}, self._inferred_wum_prob: "
               f"{self._inferred_wum_prob}, tolerance: {tolerance}")
 
-        """
-        val forwardLocation = agentState.forward(gridWidth, gridHeight).location
-            if (percept.bump || forwardLocation == agentState.location || !safeLocations.contains(forwardLocation))
-              (agentState.turnRight, TurnRight)
-            else randGen.nextInt(3) match {
-              case 0 => (agentState.forward(gridWidth, gridHeight), Forward)
-              case 1 => (agentState.forward(gridWidth, gridHeight), Forward)
-              case 2 => (agentState.turnRight, TurnRight)
-            }
-        """
-
         forward_location = self._agent_state.forward(self._grid_width, self._grid_height, False)
 
-        if percept.bump or (
-                forward_location.x == self._agent_state.location.x and forward_location.y == self._agent_state.location.y):
-            action_int = 2  # Turn Right (Copied from Scala)
-        else:
-            # Your agent will need to take risks and occasionally die to play its long-run best.
-            # Arjie: There are better way to do this.....
-            indexes = [i for i in range(3)]
-            action_int = choice(indexes)
+        if self._inferred_pit_prob < tolerance and self._inferred_wum_prob < tolerance:
+            self._safe_locations_based_on_prob.add(forward_location)
 
-        """
-        if self._inferred_pit_prob < tolerance or self._inferred_wum_prob < tolerance:
-            if percept.bump():
+        is_in_safe_locs: bool = False
+        for coord in self._safe_locations_based_on_prob:
+            if coord.get()[0] == forward_location.get()[0] and coord.get()[1] == forward_location.get()[1]:
+                is_in_safe_locs = True
+                break
+
+        if self._inferred_pit_prob < tolerance or self._inferred_wum_prob < tolerance or is_in_safe_locs:
+            if percept.bump or forward_location.x == self._agent_state.location.x and forward_location.y == self._agent_state.location.y:
                 action_int = 1  # Turn Right (Copied from Scala)
             else:
                 action_int = 0  # Forward
@@ -198,7 +187,6 @@ class ProbAgent(Agent):
             # Arjie: There are better way to do this.....
             indexes = [i for i in range(3)]
             action_int = choice(indexes)
-        """
 
         match action_int:
             case 0:
