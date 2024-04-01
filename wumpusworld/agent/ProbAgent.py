@@ -39,6 +39,9 @@ class ProbAgent(Agent):
         self._stench_locations = set()
         self._heard_scream = False
 
+        self._inferred_pit_prob: float = 0.0
+        self._inferred_wum_prob: float = 0.0
+
         self._matrix = [[Cell(x, y, False) for y in range(self._grid_height)] for x in
                         range(self._grid_width)]
 
@@ -76,7 +79,7 @@ class ProbAgent(Agent):
                 is_visiting_new_location = False
                 break
 
-        if not is_visiting_new_location:
+        if is_visiting_new_location:
             self._visited_locations.add(self._agent_state.location)
 
         # new_breeze_locations
@@ -136,144 +139,66 @@ class ProbAgent(Agent):
                     #  Remove the action from the action list (the first on the list)
                     self._action_list.pop(0)
 
-        elif percept.glitter():
+        elif percept.glitter() and not self._agent_state.has_gold:
             self._agent_state.has_gold = True
             self.has_gold = True  # Needed because Environment is looking on Agent and not the agent state.
             action_int = 3  # Grab
 
-        elif percept.stench():  # Move this from inside __search_for_gold into here.
-            if self._agent_state.has_arrow:
-                self._agent_state.use_arrow = True
-            else:
-                self._agent_state.use_arrow = False
-            action_int = 5  # Shoot
-        else:
+        elif percept.stench() and self._agent_state.has_arrow:
+            self._agent_state.use_arrow = True
 
+        else:
             # --------------------------------------------------------------------------------------------------
             # [Assignment 3]
             # --------------------------------------------------------------------------------------------------
+            # ask one question each time the agent is considering moving to a location in the grid it has never been
             if is_visiting_new_location:
+                self._inferred_pit_prob = self.__get_cell_probability_having_pit(percept)
+                self._inferred_wum_prob = self.__get_cell_probability_having_wumpus(percept)
 
-                adjacent_cells = self.__find_adjacent_cells(
-                    Cell(self._agent_state.location.x, self._agent_state.location.y))
-                num_of_adjacent_cells = len(adjacent_cells)
-                print(
-                    f"[{self._agent_state.location.x}][{self._agent_state.location.y}] The number of adjacent cells {num_of_adjacent_cells}")
-
-                if num_of_adjacent_cells == 2:
-                    loc01 = Predicate(0.2).toCategorical()
-                    loc02 = Predicate(0.2).toCategorical()
-
-                    breeze = ConditionalCategorical([[
-                        [[1.0, 0.0], [0.0, 1.0]],
-                        [[0.0, 1.0], [0.0, 1.0]]
-                    ]])
-
-                    variables = [loc01, loc02, breeze]
-                    edges = [(loc01, breeze), (loc02, breeze)]
-
-                    pits_model = BayesianNetwork(variables, edges)
-
-                    X = torch.tensor([[-1, -1, 0],  # pit12?, pit21?, breeze is false
-                                      [-1, -1, 1],  # pit12?, pit21?, breeze is true
-                                      [-1, -1, -1],  # pit12?, pit21?, breeze?
-                                      [1, -1, -1]  # pit12 is true, pit21?, breeze?
-                                      ])
-
-                    X_masked = torch.masked.MaskedTensor(X, mask=X >= 0)
-
-                    predicted_pits_proba = pits_model.predict_proba(X_masked)
-
-                    print(f"TWO parents: {predicted_pits_proba}")
-
-                if num_of_adjacent_cells == 3:
-                    loc01 = Predicate(0.2).toCategorical()
-                    loc02 = Predicate(0.2).toCategorical()
-                    loc03 = Predicate(0.2).toCategorical()
-
-                    breeze = ConditionalCategorical([[
-                        [
-                            [[1.0, 0.0], [0.0, 1.0]],
-                            [[0.0, 1.0], [0.0, 1.0]]
-                        ],
-                        [
-                            [[1.0, 0.0], [0.0, 1.0]],
-                            [[0.0, 1.0], [0.0, 1.0]]
-                        ]
-                    ]])
-
-                    variables = [loc01, loc02, loc03, breeze]
-                    edges = [(loc01, breeze), (loc02, breeze), (loc03, breeze)]
-
-                    pits_model = BayesianNetwork(variables, edges)
-
-                    X = torch.tensor([[-1, -1, -1, 0],
-                                      [-1, -1, -1, 1],
-                                      [-1, -1, -1, -1],
-                                      [1, -1, -1, -1],
-                                      [0, -1, -1, -1]
-                                      ])
-
-                    X_masked = torch.masked.MaskedTensor(X, mask=X >= 0)
-                    print(X_masked)
-
-                    predicted_pits_proba = pits_model.predict_proba(X_masked)
-                    print(f"THREE parents: {predicted_pits_proba}")
-
-                if num_of_adjacent_cells == 4:
-                    loc01 = Predicate(0.2).toCategorical()
-                    loc02 = Predicate(0.2).toCategorical()
-                    loc03 = Predicate(0.2).toCategorical()
-                    loc04 = Predicate(0.2).toCategorical()
-
-                    breeze = ConditionalCategorical([[
-                        [
-                            [
-                                [[1.0, 0.0], [0.0, 1.0]],
-                                [[0.0, 1.0], [0.0, 1.0]]
-                            ],
-                            [
-                                [[1.0, 0.0], [0.0, 1.0]],
-                                [[0.0, 1.0], [0.0, 1.0]]
-                            ]
-                        ],
-                        [
-                            [
-                                [[1.0, 0.0], [0.0, 1.0]],
-                                [[0.0, 1.0], [0.0, 1.0]]
-                            ],
-                            [
-                                [[1.0, 0.0], [0.0, 1.0]],
-                                [[0.0, 1.0], [0.0, 1.0]]
-                            ]
-                        ]
-                    ]])
-
-                    variables = [loc01, loc02, loc03, loc04, breeze]
-                    edges = [(loc01, breeze), (loc02, breeze), (loc03, breeze), (loc04, breeze)]
-
-                    pits_model = BayesianNetwork(variables, edges)
-
-                    X = torch.tensor([[-1, -1, -1, -1, 0],
-                                      [-1, -1, -1, -1, 1],
-                                      [-1, -1, -1, -1, -1],
-                                      [1, -1, -1, -1, -1]
-                                      ])
-
-                    X_masked = torch.masked.MaskedTensor(X, mask=X >= 0)
-                    print(X_masked)
-
-                    predicted_pits_proba = pits_model.predict_proba(X_masked)
-                    print(f"FOUR parents: {predicted_pits_proba}")
-
-            # --------------------------------------------------------------------------------------------------
             action_int = self.__search_for_gold(percept, 0.40)
+            # --------------------------------------------------------------------------------------------------
 
         return Action.get_by_id(action_int)
 
     def __search_for_gold(self, percept: Percept, tolerance: float):
-        indexes = [i for i in range(6) if i not in [3, 4, 5]]  # Exclude Grab (3) Climb (4) Shoot (5).
-        action_int = choice(indexes)
+        print(f"__search_for_gold : self._inferred_pit_prob: {self._inferred_pit_prob}, self._inferred_wum_prob: "
+              f"{self._inferred_wum_prob}, tolerance: {tolerance}")
+
+        """
+        val forwardLocation = agentState.forward(gridWidth, gridHeight).location
+            if (percept.bump || forwardLocation == agentState.location || !safeLocations.contains(forwardLocation))
+              (agentState.turnRight, TurnRight)
+            else randGen.nextInt(3) match {
+              case 0 => (agentState.forward(gridWidth, gridHeight), Forward)
+              case 1 => (agentState.forward(gridWidth, gridHeight), Forward)
+              case 2 => (agentState.turnRight, TurnRight)
+            }
+        """
+
+        forward_location = self._agent_state.forward(self._grid_width, self._grid_height, False)
+
+        if percept.bump() or (
+                forward_location.x == self._agent_state.location.x and forward_location.y == self._agent_state.location.y):
+            action_int = 2  # Turn Right (Copied from Scala)
+        else:
+            # Your agent will need to take risks and occasionally die to play its long-run best.
+            # Arjie: There are better way to do this.....
+            indexes = [i for i in range(3)]
+            action_int = choice(indexes)
+
+        """
+        if self._inferred_pit_prob < tolerance or self._inferred_wum_prob < tolerance:
+            if percept.bump():
+                action_int = 1  # Turn Right (Copied from Scala)
+            else:
+                action_int = 0  # Forward
+        else:
+            # Your agent will need to take risks and occasionally die to play its long-run best.
+            # Arjie: There are better way to do this.....
+            indexes = [i for i in range(3)]
+            action_int = choice(indexes)
+        """
 
         match action_int:
             case 0:
@@ -460,3 +385,211 @@ class ProbAgent(Agent):
                         j - y) == 1:
                     adjacent_cells.append(self._matrix[i][j])
         return adjacent_cells
+
+    def __is_cell_visited(self, cell: Cell):
+        is_visited = -1
+        for coord in self._visited_locations:
+            if coord.get()[0] == cell.x and coord.get()[1] == cell.y:
+                is_visited = 0
+                break
+        return is_visited
+
+    def __get_cell_probability_having_pit(self, percept: Percept) -> float:
+
+        adjacent_cells = self.__find_adjacent_cells(
+            Cell(self._agent_state.location.x, self._agent_state.location.y))
+        num_of_adjacent_cells = len(adjacent_cells)
+
+        print(
+            f"[{self._agent_state.location.x}][{self._agent_state.location.y}] The number of adjacent cells {num_of_adjacent_cells}")
+
+        """
+        # You will only need to ask one question at a time, each time the agent is considering moving to a location
+        # in the grid it has never been
+        # You'll be interested in the probability of there being a hazard (a pit or the Wumpus) in all of the locations
+        # the agent can get to without stepping outside locations it has previously been and choose the safest one to
+        # go to (or beeline out if the risk is too great)
+        # Prepare a list with 0 for every pit location the agent has been (because its safe: the agent didn't die),
+        # -1 for all others; and for the breeze locations: 0 if no breeze detected there, 1 if so, -1 if unknown
+        # Then call predict_proba() and pull out the probabilities of interest
+        """
+
+        proba = 0.0
+
+        is_breeze = 0
+        if percept.breeze():
+            is_breeze = 1
+
+        if num_of_adjacent_cells == 2:
+            loc01 = Predicate(0.2).toCategorical()
+            loc02 = Predicate(0.2).toCategorical()
+
+            breeze = ConditionalCategorical([[
+                [[1.0, 0.0], [0.0, 1.0]],
+                [[0.0, 1.0], [0.0, 1.0]]
+            ]])
+
+            variables = [loc01, loc02, breeze]
+            edges = [(loc01, breeze), (loc02, breeze)]
+
+            pits_model = BayesianNetwork(variables, edges)
+
+            # This the original tensor from the example:
+            # X = torch.tensor([[-1, -1, 0],  # pit12?, pit21?, breeze is false
+            #                  [-1, -1, 1],  # pit12?, pit21?, breeze is true
+            #                  [-1, -1, -1],  # pit12?, pit21?, breeze?
+            #                  [1, -1, -1]  # pit12 is true, pit21?, breeze?
+            #                  ])
+
+            adjacent_cell01_possible_pit = self.__is_cell_visited(adjacent_cells[0])
+            adjacent_cell02_possible_pit = self.__is_cell_visited(adjacent_cells[1])
+
+            print(f"Tensor: [{adjacent_cell01_possible_pit}, {adjacent_cell02_possible_pit}, {is_breeze}]")
+            X = torch.tensor([
+                [adjacent_cell01_possible_pit, adjacent_cell02_possible_pit, 0],
+                [adjacent_cell01_possible_pit, adjacent_cell02_possible_pit, 1]
+            ])
+            # X = torch.tensor([
+            #     [adjacent_cell01_possible_pit, adjacent_cell02_possible_pit, is_breeze],
+            # ])
+
+            X_masked = torch.masked.MaskedTensor(X, mask=X >= 0)
+
+            predicted_pits_proba = pits_model.predict_proba(X_masked)
+
+            print(f"TWO parents: {predicted_pits_proba}")
+            if is_breeze:
+                proba = predicted_pits_proba[1][1][1]
+                print(f"is_breeze: 1, proba: {proba}")
+            else:
+                proba = predicted_pits_proba[0][1][1]
+                print(f"is_breeze: 0, proba: {proba}")
+
+        elif num_of_adjacent_cells == 3:
+            loc01 = Predicate(0.2).toCategorical()
+            loc02 = Predicate(0.2).toCategorical()
+            loc03 = Predicate(0.2).toCategorical()
+
+            breeze = ConditionalCategorical([[
+                [
+                    [[1.0, 0.0], [0.0, 1.0]],
+                    [[0.0, 1.0], [0.0, 1.0]]
+                ],
+                [
+                    [[1.0, 0.0], [0.0, 1.0]],
+                    [[0.0, 1.0], [0.0, 1.0]]
+                ]
+            ]])
+
+            variables = [loc01, loc02, loc03, breeze]
+            edges = [(loc01, breeze), (loc02, breeze), (loc03, breeze)]
+
+            pits_model = BayesianNetwork(variables, edges)
+
+            # X = torch.tensor([[-1, -1, -1, 0],
+            #                  [-1, -1, -1, 1],
+            #                  [-1, -1, -1, -1],
+            #                  [1, -1, -1, -1],
+            #                  [0, -1, -1, -1]
+            #                  ])
+
+            adjacent_cell01_possible_pit = self.__is_cell_visited(adjacent_cells[0])
+            adjacent_cell02_possible_pit = self.__is_cell_visited(adjacent_cells[1])
+            adjacent_cell03_possible_pit = self.__is_cell_visited(adjacent_cells[2])
+
+            print(
+                f"Tensor: [{adjacent_cell01_possible_pit}, {adjacent_cell02_possible_pit}, {adjacent_cell03_possible_pit}, {is_breeze}]")
+            X = torch.tensor([
+                [adjacent_cell01_possible_pit, adjacent_cell02_possible_pit, adjacent_cell03_possible_pit, 0],
+                [adjacent_cell01_possible_pit, adjacent_cell02_possible_pit, adjacent_cell03_possible_pit, 1]
+            ])
+            # X = torch.tensor([
+            #    [adjacent_cell01_possible_pit, adjacent_cell02_possible_pit, adjacent_cell03_possible_pit, is_breeze]
+            # ])
+
+            X_masked = torch.masked.MaskedTensor(X, mask=X >= 0)
+
+            predicted_pits_proba = pits_model.predict_proba(X_masked)
+            print(f"THREE parents: {predicted_pits_proba}")
+            # proba = predicted_pits_proba[0][1][0]
+            if is_breeze:
+                proba = predicted_pits_proba[1][1][1]
+                print(f"is_breeze: 1, proba: {proba}")
+            else:
+                proba = predicted_pits_proba[0][1][1]
+                print(f"is_breeze: 0, proba: {proba}")
+
+        elif num_of_adjacent_cells == 4:
+            loc01 = Predicate(0.2).toCategorical()
+            loc02 = Predicate(0.2).toCategorical()
+            loc03 = Predicate(0.2).toCategorical()
+            loc04 = Predicate(0.2).toCategorical()
+
+            breeze = ConditionalCategorical([[
+                [
+                    [
+                        [[1.0, 0.0], [0.0, 1.0]],
+                        [[0.0, 1.0], [0.0, 1.0]]
+                    ],
+                    [
+                        [[1.0, 0.0], [0.0, 1.0]],
+                        [[0.0, 1.0], [0.0, 1.0]]
+                    ]
+                ],
+                [
+                    [
+                        [[1.0, 0.0], [0.0, 1.0]],
+                        [[0.0, 1.0], [0.0, 1.0]]
+                    ],
+                    [
+                        [[1.0, 0.0], [0.0, 1.0]],
+                        [[0.0, 1.0], [0.0, 1.0]]
+                    ]
+                ]
+            ]])
+
+            variables = [loc01, loc02, loc03, loc04, breeze]
+            edges = [(loc01, breeze), (loc02, breeze), (loc03, breeze), (loc04, breeze)]
+
+            pits_model = BayesianNetwork(variables, edges)
+
+            # X = torch.tensor([[-1, -1, -1, -1, 0],
+            #                  [-1, -1, -1, -1, 1],
+            #                  [-1, -1, -1, -1, -1],
+            #                  [1, -1, -1, -1, -1]
+            #                  ])
+
+            adjacent_cell01_possible_pit = self.__is_cell_visited(adjacent_cells[0])
+            adjacent_cell02_possible_pit = self.__is_cell_visited(adjacent_cells[1])
+            adjacent_cell03_possible_pit = self.__is_cell_visited(adjacent_cells[2])
+            adjacent_cell04_possible_pit = self.__is_cell_visited(adjacent_cells[3])
+
+            print(
+                f"Tensor: [{adjacent_cell01_possible_pit}, {adjacent_cell02_possible_pit}, {adjacent_cell03_possible_pit}, {adjacent_cell04_possible_pit}, {is_breeze}]")
+            X = torch.tensor([
+                [adjacent_cell01_possible_pit, adjacent_cell02_possible_pit, adjacent_cell03_possible_pit,
+                 adjacent_cell04_possible_pit, 0],
+                [adjacent_cell01_possible_pit, adjacent_cell02_possible_pit, adjacent_cell03_possible_pit,
+                 adjacent_cell04_possible_pit, 1]
+            ])
+            # X = torch.tensor([
+            #    [adjacent_cell01_possible_pit, adjacent_cell02_possible_pit, adjacent_cell03_possible_pit,
+            #      adjacent_cell04_possible_pit, is_breeze]
+            # ])
+
+            X_masked = torch.masked.MaskedTensor(X, mask=X >= 0)
+
+            predicted_pits_proba = pits_model.predict_proba(X_masked)
+            print(f"FOUR parents: {predicted_pits_proba}")
+            # proba = predicted_pits_proba[0][1][0]
+            if is_breeze:
+                proba = predicted_pits_proba[1][1][1]
+                print(f"is_breeze: 1, proba: {proba}")
+            else:
+                proba = predicted_pits_proba[0][1][1]
+                print(f"is_breeze: 0, proba: {proba}")
+
+        return proba
+
+    def __get_cell_probability_having_wumpus(self, percept: Percept) -> float:
+        return self.__get_cell_probability_having_pit(percept)  # TODO

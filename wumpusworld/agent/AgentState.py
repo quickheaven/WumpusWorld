@@ -45,7 +45,7 @@ class AgentState:
     def turn_right(self):
         self._orientation = self._orientation.turn_right()
 
-    def forward(self, grid_width, grid_height):
+    def forward(self, grid_width, grid_height, is_apply=True):
         new_agent_location = None
         if isinstance(self._orientation, West):
             new_agent_location = Coords(self._location.x, max(0, self._location.y - 1))
@@ -59,7 +59,8 @@ class AgentState:
         elif isinstance(self._orientation, North):
             new_agent_location = Coords(min(grid_width - 1, self._location.x + 1), self._location.y)
 
-        self._location = new_agent_location
+        if is_apply == True:
+            self._location = new_agent_location
 
         return new_agent_location
 

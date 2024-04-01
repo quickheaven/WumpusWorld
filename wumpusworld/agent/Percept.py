@@ -35,3 +35,6 @@ class Percept:
 
     def scream(self):
         return self._scream
+
+    def bump(self):
+        return self._bump
