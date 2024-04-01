@@ -401,7 +401,7 @@ class ProbAgent(Agent):
         num_of_adjacent_cells = len(adjacent_cells)
 
         print(
-            f"[{self._agent_state.location.x}][{self._agent_state.location.y}] The number of adjacent cells {num_of_adjacent_cells}")
+            f"__get_cell_probability_having_pit [{self._agent_state.location.x}][{self._agent_state.location.y}] The number of adjacent cells {num_of_adjacent_cells}")
 
         """
         # You will only need to ask one question at a time, each time the agent is considering moving to a location
@@ -414,7 +414,8 @@ class ProbAgent(Agent):
         # Then call predict_proba() and pull out the probabilities of interest
         """
 
-        proba = 0.0
+        X = None
+        pits_model = None
 
         is_breeze = 0
         if percept.breeze():
@@ -445,25 +446,12 @@ class ProbAgent(Agent):
             adjacent_cell02_possible_pit = self.__is_cell_visited(adjacent_cells[1])
 
             print(f"Tensor: [{adjacent_cell01_possible_pit}, {adjacent_cell02_possible_pit}, {is_breeze}]")
+            # The sample Pomegranate code mentions I only need to ask one question. However, I would like to know the
+            # difference between with breeze and without. Hence, asking two questions here.
             X = torch.tensor([
                 [adjacent_cell01_possible_pit, adjacent_cell02_possible_pit, 0],
                 [adjacent_cell01_possible_pit, adjacent_cell02_possible_pit, 1]
             ])
-            # X = torch.tensor([
-            #     [adjacent_cell01_possible_pit, adjacent_cell02_possible_pit, is_breeze],
-            # ])
-
-            X_masked = torch.masked.MaskedTensor(X, mask=X >= 0)
-
-            predicted_pits_proba = pits_model.predict_proba(X_masked)
-
-            print(f"TWO parents: {predicted_pits_proba}")
-            if is_breeze:
-                proba = predicted_pits_proba[1][1][1]
-                print(f"is_breeze: 1, proba: {proba}")
-            else:
-                proba = predicted_pits_proba[0][1][1]
-                print(f"is_breeze: 0, proba: {proba}")
 
         elif num_of_adjacent_cells == 3:
             loc01 = Predicate(0.2).toCategorical()
@@ -503,21 +491,6 @@ class ProbAgent(Agent):
                 [adjacent_cell01_possible_pit, adjacent_cell02_possible_pit, adjacent_cell03_possible_pit, 0],
                 [adjacent_cell01_possible_pit, adjacent_cell02_possible_pit, adjacent_cell03_possible_pit, 1]
             ])
-            # X = torch.tensor([
-            #    [adjacent_cell01_possible_pit, adjacent_cell02_possible_pit, adjacent_cell03_possible_pit, is_breeze]
-            # ])
-
-            X_masked = torch.masked.MaskedTensor(X, mask=X >= 0)
-
-            predicted_pits_proba = pits_model.predict_proba(X_masked)
-            print(f"THREE parents: {predicted_pits_proba}")
-            # proba = predicted_pits_proba[0][1][0]
-            if is_breeze:
-                proba = predicted_pits_proba[1][1][1]
-                print(f"is_breeze: 1, proba: {proba}")
-            else:
-                proba = predicted_pits_proba[0][1][1]
-                print(f"is_breeze: 0, proba: {proba}")
 
         elif num_of_adjacent_cells == 4:
             loc01 = Predicate(0.2).toCategorical()
@@ -572,24 +545,153 @@ class ProbAgent(Agent):
                 [adjacent_cell01_possible_pit, adjacent_cell02_possible_pit, adjacent_cell03_possible_pit,
                  adjacent_cell04_possible_pit, 1]
             ])
-            # X = torch.tensor([
-            #    [adjacent_cell01_possible_pit, adjacent_cell02_possible_pit, adjacent_cell03_possible_pit,
-            #      adjacent_cell04_possible_pit, is_breeze]
-            # ])
 
-            X_masked = torch.masked.MaskedTensor(X, mask=X >= 0)
+        # ------------------------------------------------------------------------
+        X_masked = torch.masked.MaskedTensor(X, mask=X >= 0)
 
-            predicted_pits_proba = pits_model.predict_proba(X_masked)
-            print(f"FOUR parents: {predicted_pits_proba}")
-            # proba = predicted_pits_proba[0][1][0]
-            if is_breeze:
-                proba = predicted_pits_proba[1][1][1]
-                print(f"is_breeze: 1, proba: {proba}")
-            else:
-                proba = predicted_pits_proba[0][1][1]
-                print(f"is_breeze: 0, proba: {proba}")
+        predicted_pits_proba = pits_model.predict_proba(X_masked)
+
+        print(f"{num_of_adjacent_cells} adjacent cells: {predicted_pits_proba}")
+        if is_breeze:
+            proba = predicted_pits_proba[1][1][1]
+            print(f"is_breeze: 1, proba: {proba}")
+        else:
+            proba = predicted_pits_proba[0][1][1]
+            print(f"is_breeze: 0, proba: {proba}")
 
         return proba
 
     def __get_cell_probability_having_wumpus(self, percept: Percept) -> float:
-        return self.__get_cell_probability_having_pit(percept)  # TODO
+
+        adjacent_cells = self.__find_adjacent_cells(
+            Cell(self._agent_state.location.x, self._agent_state.location.y))
+        num_of_adjacent_cells = len(adjacent_cells)
+
+        print(
+            f"__get_cell_probability_having_wumpus [{self._agent_state.location.x}][{self._agent_state.location.y}] The number of adjacent cells {num_of_adjacent_cells}")
+
+        X = None
+        wums_model = None
+
+        is_stench = 0
+        if percept.stench():
+            is_stench = 1
+
+        if num_of_adjacent_cells == 2:
+            loc01 = Predicate(0.2).toCategorical()
+            loc02 = Predicate(0.2).toCategorical()
+
+            stench = ConditionalCategorical([[
+                [[1.0, 0.0], [0.0, 1.0]],
+                [[0.0, 1.0], [0.0, 1.0]]
+            ]])
+
+            variables = [loc01, loc02, stench]
+            edges = [(loc01, stench), (loc02, stench)]
+
+            wums_model = BayesianNetwork(variables, edges)
+
+            adjacent_cell01_possible_wum = self.__is_cell_visited(adjacent_cells[0])
+            adjacent_cell02_possible_wum = self.__is_cell_visited(adjacent_cells[1])
+
+            print(f"Tensor: [{adjacent_cell01_possible_wum}, {adjacent_cell02_possible_wum}, {is_stench}]")
+
+            X = torch.tensor([
+                [adjacent_cell01_possible_wum, adjacent_cell02_possible_wum, 0],
+                [adjacent_cell01_possible_wum, adjacent_cell02_possible_wum, 1]
+            ])
+
+        elif num_of_adjacent_cells == 3:
+            loc01 = Predicate(0.2).toCategorical()
+            loc02 = Predicate(0.2).toCategorical()
+            loc03 = Predicate(0.2).toCategorical()
+
+            stench = ConditionalCategorical([[
+                [
+                    [[1.0, 0.0], [0.0, 1.0]],
+                    [[0.0, 1.0], [0.0, 1.0]]
+                ],
+                [
+                    [[1.0, 0.0], [0.0, 1.0]],
+                    [[0.0, 1.0], [0.0, 1.0]]
+                ]
+            ]])
+
+            variables = [loc01, loc02, loc03, stench]
+            edges = [(loc01, stench), (loc02, stench), (loc03, stench)]
+
+            wums_model = BayesianNetwork(variables, edges)
+
+            adjacent_cell01_possible_wum = self.__is_cell_visited(adjacent_cells[0])
+            adjacent_cell02_possible_wum = self.__is_cell_visited(adjacent_cells[1])
+            adjacent_cell03_possible_wum = self.__is_cell_visited(adjacent_cells[2])
+
+            print(
+                f"Tensor: [{adjacent_cell01_possible_wum}, {adjacent_cell02_possible_wum}, {adjacent_cell03_possible_wum}, {is_stench}]")
+            X = torch.tensor([
+                [adjacent_cell01_possible_wum, adjacent_cell02_possible_wum, adjacent_cell03_possible_wum, 0],
+                [adjacent_cell01_possible_wum, adjacent_cell02_possible_wum, adjacent_cell03_possible_wum, 1]
+            ])
+
+        elif num_of_adjacent_cells == 4:
+            loc01 = Predicate(0.2).toCategorical()
+            loc02 = Predicate(0.2).toCategorical()
+            loc03 = Predicate(0.2).toCategorical()
+            loc04 = Predicate(0.2).toCategorical()
+
+            stench = ConditionalCategorical([[
+                [
+                    [
+                        [[1.0, 0.0], [0.0, 1.0]],
+                        [[0.0, 1.0], [0.0, 1.0]]
+                    ],
+                    [
+                        [[1.0, 0.0], [0.0, 1.0]],
+                        [[0.0, 1.0], [0.0, 1.0]]
+                    ]
+                ],
+                [
+                    [
+                        [[1.0, 0.0], [0.0, 1.0]],
+                        [[0.0, 1.0], [0.0, 1.0]]
+                    ],
+                    [
+                        [[1.0, 0.0], [0.0, 1.0]],
+                        [[0.0, 1.0], [0.0, 1.0]]
+                    ]
+                ]
+            ]])
+
+            variables = [loc01, loc02, loc03, loc04, stench]
+            edges = [(loc01, stench), (loc02, stench), (loc03, stench), (loc04, stench)]
+
+            wums_model = BayesianNetwork(variables, edges)
+
+            adjacent_cell01_possible_wum = self.__is_cell_visited(adjacent_cells[0])
+            adjacent_cell02_possible_wum = self.__is_cell_visited(adjacent_cells[1])
+            adjacent_cell03_possible_wum = self.__is_cell_visited(adjacent_cells[2])
+            adjacent_cell04_possible_wum = self.__is_cell_visited(adjacent_cells[3])
+
+            print(
+                f"Tensor: [{adjacent_cell01_possible_wum}, {adjacent_cell02_possible_wum}, {adjacent_cell03_possible_wum}, {adjacent_cell04_possible_wum}, {is_stench}]")
+            X = torch.tensor([
+                [adjacent_cell01_possible_wum, adjacent_cell02_possible_wum, adjacent_cell03_possible_wum,
+                 adjacent_cell04_possible_wum, 0],
+                [adjacent_cell01_possible_wum, adjacent_cell02_possible_wum, adjacent_cell03_possible_wum,
+                 adjacent_cell04_possible_wum, 1]
+            ])
+
+        # ------------------------------------------------------------------------
+        X_masked = torch.masked.MaskedTensor(X, mask=X >= 0)
+
+        predicted_wums_proba = wums_model.predict_proba(X_masked)
+
+        print(f"{num_of_adjacent_cells} adjacent cells: {predicted_wums_proba}")
+        if is_stench:
+            proba = predicted_wums_proba[1][1][1]
+            print(f"is_stench: 1, proba: {proba}")
+        else:
+            proba = predicted_wums_proba[0][1][1]
+            print(f"is_stench: 0, proba: {proba}")
+
+        return proba
