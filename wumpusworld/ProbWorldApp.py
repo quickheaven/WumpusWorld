@@ -1,6 +1,7 @@
 from wumpusworld.agent.Agent import Agent
 from wumpusworld.agent.MovePlanningAgent import MovePlanningAgent
 from wumpusworld.agent.Percept import Percept
+from wumpusworld.agent.ProbAgent import ProbAgent
 from wumpusworld.env.Environment import Environment
 
 
@@ -23,11 +24,11 @@ def run_episode(env: Environment, agent: Agent, env_percept: Percept):
 
 
 if __name__ == '__main__':
-    player = MovePlanningAgent(4, 4)
+    player = ProbAgent(4, 4)
 
     # Create the Cave
     index_display_start_on_zero: bool = True  # Set this False if we want to display the grid as [1][1].
-    environment = Environment(4, 4, False, 0.0, index_display_start_on_zero)
+    environment = Environment(4, 4, False, 0.2, index_display_start_on_zero)
 
     # Player enters the Cave
     environment.add_agent(player)
